@@ -1,0 +1,8 @@
+# Variáveis locais (nunca versionar credenciais)
+.env
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

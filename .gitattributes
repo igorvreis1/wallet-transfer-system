@@ -1,0 +1,4 @@
+# Scripts de shell rodam dentro de containers Linux: precisam de quebra de linha LF
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
