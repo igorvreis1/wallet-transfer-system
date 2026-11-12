@@ -55,15 +55,73 @@ O `app` só inicia quando o MySQL passa no *healthcheck*. O `entrypoint.sh` inst
 7. Quem pode reverter: quem **enviou** a transferência, ou o **dono** do depósito.
 8. Uma operação só pode ser revertida **uma vez**, e uma reversão não pode ser revertida.
 
-## 5. Modelagem de dados (planejada)
+## 5. Modelagem de dados
 
-**users**: `id`, `email` (único), `nickname` (único), `password` (hash), `balance` (BIGINT com sinal, em centavos), timestamps.
+**users** *(implementada)*: `id`, `email` (único), `nickname` (único, até 30 caracteres), `password` (hash), `balance` (BIGINT com sinal, em centavos, padrão 0), timestamps.
+
+**personal_access_tokens** *(implementada, do Sanctum)*: tokens de acesso. O banco guarda só o hash do token, nunca o valor em texto.
 
 **transactions**: `id`, `type` (`deposit` | `transfer` | `reversal`), `sender_id` (nulo em depósitos), `receiver_id`, `amount` (BIGINT sem sinal, > 0), `status` (`completed` | `reversed`), `reversal_of_id` (FK para a operação revertida), `reason`, timestamps.
 
 **error_logs**: `id`, `request_id`, `user_id`, `method`, `route`, `exception`, `message`, `context` (JSON), `created_at`. Registra apenas erros inesperados; erros de regra de negócio (ex.: saldo insuficiente) não entram, pois são o sistema funcionando.
 
-## 6. Comandos úteis
+## 6. Autenticação
+
+### Fluxo
+1. O cliente chama `POST /api/auth/register` ou `POST /api/auth/login` e recebe um **token**.
+2. Nas próximas requisições, envia o header `Authorization: Bearer <token>`.
+3. O middleware `auth:sanctum` valida o token; sem ele, a resposta é `401`.
+4. `POST /api/auth/logout` apaga o token usado, que deixa de funcionar na hora.
+
+### Camadas (do HTTP ao banco)
+
+```
+routes/api.php
+  └─ AuthController            recebe a requisição e devolve a resposta (controller "magro")
+       ├─ RegisterRequest      validação e normalização do cadastro
+       ├─ LoginRequest         validação do login
+       └─ AuthService          regras de cadastro, login e logout
+            └─ UserRepositoryInterface  ←  EloquentUserRepository  (acesso ao banco)
+UserResource                   formato público do usuário na resposta (sem a senha)
+```
+
+| Peça | Princípio / padrão |
+|---|---|
+| `AuthController` só orquestra; validação e regra ficam em outras classes | **S**ingle Responsibility |
+| `AuthService` depende de `UserRepositoryInterface`, não do Eloquent | **D**ependency Inversion + padrão **Repository** |
+| A ligação interface → implementação fica no `AppServiceProvider` | Injeção de dependência pelo *service container* |
+| `BusinessException` é a base dos erros de negócio; novos erros só estendem a classe | **O**pen/Closed |
+| `UserResource` controla o que sai na API | Padrão **Resource / Transformer** |
+
+### Segurança
+| Medida | Onde |
+|---|---|
+| Senha com hash bcrypt (cast `hashed`) | `User` |
+| Senha forte: mínimo 8 caracteres, com letras e números, e confirmação | `RegisterRequest` |
+| Email e nickname normalizados (minúsculas, sem espaços) e únicos | `RegisterRequest` + índices `unique` |
+| Mensagem de login genérica: não revela se o usuário existe | `InvalidCredentialsException` |
+| Limite de 5 tentativas por minuto (IP + login) em cadastro e login | `RateLimiter 'auth'` |
+| Token expira em 24h (`SANCTUM_EXPIRATION`) | `config/sanctum.php` |
+| CORS liberado apenas para o frontend (`FRONTEND_URL`) | `config/cors.php` |
+| `balance` fora do `$fillable`: o saldo não pode ser alterado pelo cadastro | `User` |
+
+## 7. Tratamento de erros
+
+Toda resposta de erro da API segue o formato `{ "message": "..." }`, em português. Erros de validação também trazem `errors`, com as mensagens de cada campo. A configuração fica em `bootstrap/app.php`.
+
+| Situação | Status | Exemplo de `message` |
+|---|---|---|
+| Dados inválidos | 422 | "Verifique os dados informados." + `errors` por campo |
+| Login incorreto | 401 | "Email/nickname ou senha inválidos." |
+| Sem token / token inválido ou expirado | 401 | "Sessão inválida ou expirada. Faça login novamente." |
+| Excesso de tentativas | 429 | "Muitas tentativas. Tente novamente em 55 segundos." |
+| Rota inexistente | 404 | "Recurso não encontrado." |
+| Método HTTP errado | 405 | "Método HTTP não permitido para esta rota." |
+| Erro inesperado (produção) | 500 | "Ocorreu um erro interno. Tente novamente mais tarde." |
+
+Erros de negócio (`BusinessException`) **não** são registrados em log, porque são o sistema funcionando corretamente. Apenas erros inesperados serão registrados (fase 6).
+
+## 8. Comandos úteis
 
 ```bash
 docker compose up -d --build          # sobe tudo

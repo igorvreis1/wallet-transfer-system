@@ -31,10 +31,25 @@ docker compose up -d --build
 
 Na primeira execução o container instala as dependências e aplica as migrations sozinho.
 
+Para criar usuários de demonstração (`alice` com R$ 100,00 e `bob`, senha `password1`):
+
+```bash
+docker compose exec app php artisan db:seed
+```
+
+## Endpoints
+
+| Método | Rota | Autenticação | Descrição |
+|---|---|---|---|
+| POST | `/api/auth/register` | Pública | Cadastro (email, nickname, senha) |
+| POST | `/api/auth/login` | Pública | Login por email **ou** nickname |
+| POST | `/api/auth/logout` | Bearer | Revoga o token atual |
+| GET | `/api/auth/me` | Bearer | Dados do usuário logado |
+
 ## Status
 
 - [x] **Fase 1:** monorepo, ambiente Docker (MySQL, PHP-FPM, Nginx, Vite)
-- [ ] **Fase 2:** autenticação (registro e login com Sanctum)
+- [x] **Fase 2:** autenticação (cadastro, login por email ou nickname, logout, token Bearer com Sanctum)
 - [ ] **Fase 3:** carteira (depósito, transferência, reversão)
 - [ ] **Fase 4:** testes unitários e de integração
 - [ ] **Fase 5:** frontend completo

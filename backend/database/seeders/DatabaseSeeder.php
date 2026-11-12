@@ -15,11 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Usuários de demonstração (senha: password1). Saldo em centavos.
+        User::factory()->withBalance(100_00)->create([
+            'email' => 'alice@example.com',
+            'nickname' => 'alice',
+        ]);
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'bob@example.com',
+            'nickname' => 'bob',
         ]);
     }
 }
