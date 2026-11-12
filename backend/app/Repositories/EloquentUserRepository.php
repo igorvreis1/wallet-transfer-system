@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use Illuminate\Support\Collection;
 
 class EloquentUserRepository implements UserRepositoryInterface
 {
@@ -20,5 +21,15 @@ class EloquentUserRepository implements UserRepositoryInterface
     public function create(array $data): User
     {
         return User::query()->create($data);
+    }
+
+    public function lockForUpdate(array $ids): Collection
+    {
+        return User::query()
+            ->whereIn('id', array_unique($ids))
+            ->orderBy('id') // ordem fixa: duas operações nunca esperam uma pela outra em círculo
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
     }
 }

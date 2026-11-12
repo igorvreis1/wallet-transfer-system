@@ -61,7 +61,25 @@ O `app` só inicia quando o MySQL passa no *healthcheck*. O `entrypoint.sh` inst
 
 **personal_access_tokens** *(implementada, do Sanctum)*: tokens de acesso. O banco guarda só o hash do token, nunca o valor em texto.
 
-**transactions**: `id`, `type` (`deposit` | `transfer` | `reversal`), `sender_id` (nulo em depósitos), `receiver_id`, `amount` (BIGINT sem sinal, > 0), `status` (`completed` | `reversed`), `reversal_of_id` (FK para a operação revertida), `reason`, timestamps.
+**transactions** *(implementada)*: o livro-razão (*ledger*) de toda movimentação. `id`, `type` (`deposit` | `transfer` | `reversal`), `status` (`completed` | `reversed`), `sender_id`, `receiver_id`, `amount` (BIGINT sem sinal, em centavos, > 0), `reversal_of_id` (FK para a operação revertida, **UNIQUE**), `reason`, timestamps. Índices em `(sender_id, created_at)` e `(receiver_id, created_at)` para o extrato.
+
+Convenção: **`sender_id` é de quem o saldo sai e `receiver_id` é para quem o saldo entra.**
+
+| Operação | sender_id | receiver_id |
+|---|---|---|
+| Depósito | nulo | dono |
+| Transferência A → B | A | B |
+| Reversão da transferência | B | A |
+| Reversão do depósito | dono | nulo |
+
+Com essa convenção, o saldo de qualquer usuário é sempre igual a **(soma do que entrou) − (soma do que saiu)** no ledger. É uma forma de auditar a consistência:
+
+```sql
+SELECT u.nickname, u.balance,
+       COALESCE((SELECT SUM(amount) FROM transactions WHERE receiver_id = u.id), 0)
+     - COALESCE((SELECT SUM(amount) FROM transactions WHERE sender_id   = u.id), 0) AS saldo_pelo_extrato
+FROM users u;
+```
 
 **error_logs**: `id`, `request_id`, `user_id`, `method`, `route`, `exception`, `message`, `context` (JSON), `created_at`. Registra apenas erros inesperados; erros de regra de negócio (ex.: saldo insuficiente) não entram, pois são o sistema funcionando.
 
@@ -105,7 +123,85 @@ UserResource                   formato público do usuário na resposta (sem a s
 | CORS liberado apenas para o frontend (`FRONTEND_URL`) | `config/cors.php` |
 | `balance` fora do `$fillable`: o saldo não pode ser alterado pelo cadastro | `User` |
 
-## 7. Tratamento de erros
+## 7. Carteira
+
+### Camadas
+
+```
+WalletController ─┬─ DepositRequest / TransferRequest / LookupRecipientRequest   validação
+                  ├─ DepositService      depósito
+                  └─ TransferService     busca do destinatário + transferência
+TransactionController ─┬─ TransactionRepository   extrato e detalhe
+                       └─ ReversalService         reversão
+TransactionResource    linha do extrato do ponto de vista de quem está logado
+```
+
+Cada operação tem **seu próprio service** (Single Responsibility), e todos dependem das interfaces `UserRepositoryInterface` e `TransactionRepositoryInterface` (Dependency Inversion).
+
+### Depósito
+1. Valida `amount` (inteiro em centavos, de 1 até 100.000.000).
+2. Abre uma transação no banco e **trava a linha do usuário**.
+3. Soma ao saldo. Se o saldo estiver negativo, o depósito quita a dívida (-R$ 30 + R$ 50 = R$ 20).
+4. Registra a operação no ledger.
+
+### Transferência
+1. `recipient` aceita email ou nickname. Se não encontrar: **404** "Nenhum usuário encontrado com esse email ou nickname." Para si mesmo: **422**.
+2. O frontend chama antes `GET /api/users/lookup` para mostrar a confirmação (*"Transferir R$ 30,00 para @bob?"*). A rota devolve só o nickname e o email mascarado (`bo***@example.com`).
+3. Dentro de uma transação no banco, **trava os dois usuários** e só então confere o saldo.
+4. Sem saldo: **422** "Saldo insuficiente. Seu saldo atual é R$ X." Com saldo: debita, credita e registra.
+
+### Concorrência
+Sem proteção, duas transferências simultâneas poderiam ler o mesmo saldo, as duas aprovarem e o dinheiro ser gasto duas vezes. A solução:
+
+- **`DB::transaction()`**: tudo ou nada. Se algo falhar no meio, saldo e registro são desfeitos juntos.
+- **`lockForUpdate()`** (`SELECT ... FOR UPDATE`): a segunda operação **espera** a primeira terminar e só então lê o saldo, já atualizado.
+- **Ordem fixa dos locks** (menor id primeiro): evita *deadlock* quando A transfere para B ao mesmo tempo em que B transfere para A.
+- **`attempts: 3`**: se o MySQL ainda assim detectar um deadlock, o Laravel tenta a operação de novo.
+
+Teste realizado: com saldo para exatamente 6 transferências de R$ 30,00, foram disparadas **10 simultâneas**. Resultado: **6 aprovadas, 4 recusadas por saldo insuficiente**, saldo final de R$ 0,75, sem nunca ficar negativo.
+
+### Reversão
+`POST /api/transactions/{id}/reverse`, com `reason` opcional.
+
+| Regra | Resposta se violada |
+|---|---|
+| Transferência: só quem **enviou** pode reverter | 403 "Apenas quem enviou a transferência pode revertê-la." |
+| Depósito: só o **dono** pode reverter | 403 "Apenas o dono do depósito pode revertê-lo." |
+| Uma reversão não pode ser revertida | 403 "Uma reversão não pode ser revertida." |
+| Cada operação só é revertida uma vez | 409 "Esta transação já foi revertida." |
+| Transação inexistente ou de outra pessoa | 404 "Transação não encontrada." |
+
+Como funciona:
+- **Nada é apagado.** A original vira `reversed` e uma nova linha `reversal` registra o estorno, então o histórico é auditável.
+- A reversão é aplicada **por inteiro**, mesmo que deixe o saldo de quem recebeu **negativo** (modelo de estorno/chargeback). O próximo depósito quita a dívida.
+- A operação original é travada (`lockForUpdate`), e o índice `UNIQUE` em `reversal_of_id` garante no próprio banco que não existam duas reversões da mesma operação.
+
+**Reversão por inconsistência (uso administrativo).** Para quando o suporte identifica um problema, sem exigir ser o dono da operação:
+
+```bash
+docker compose exec app php artisan wallet:reverse 15 --reason="Transferência duplicada"
+```
+
+Além disso, qualquer falha **durante** uma operação é desfeita automaticamente pela transação do banco (rollback), então o sistema nunca fica num estado intermediário.
+
+## 8. Coleção do Postman
+
+Arquivo: `docs/postman/wallet-transfer-system.postman_collection.json`.
+
+```
+1. Saúde da API
+2. Autenticação         ✅ Sucesso  |  ❌ Erros esperados
+3. Carteira             ✅ Sucesso  |  ❌ Erros esperados
+4. Transferências       ✅ Sucesso  |  ❌ Erros esperados
+5. Extrato e Reversão   ✅ Sucesso  |  ❌ Erros esperados
+```
+
+- O login salva o token na variável `{{token}}`, e as demais rotas o usam automaticamente.
+- Depósito e transferência salvam o id em `{{transaction_id}}`, usado no detalhe e na reversão.
+- Cada requisição tem uma descrição e um teste que confere o status HTTP esperado.
+- A coleção inteira pode ser executada de uma vez (*Run collection*): **25 requisições, 25 testes aprovados** com o banco recém-criado pelo seed.
+
+## 9. Tratamento de erros
 
 Toda resposta de erro da API segue o formato `{ "message": "..." }`, em português. Erros de validação também trazem `errors`, com as mensagens de cada campo. A configuração fica em `bootstrap/app.php`.
 
@@ -121,7 +217,7 @@ Toda resposta de erro da API segue o formato `{ "message": "..." }`, em portugu�
 
 Erros de negócio (`BusinessException`) **não** são registrados em log, porque são o sistema funcionando corretamente. Apenas erros inesperados serão registrados (fase 6).
 
-## 8. Comandos úteis
+## 10. Comandos úteis
 
 ```bash
 docker compose up -d --build          # sobe tudo

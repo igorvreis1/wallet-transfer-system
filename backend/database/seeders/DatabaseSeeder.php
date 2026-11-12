@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Services\Wallet\DepositService;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -11,19 +12,14 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * Usuários de demonstração (senha: password1).
      */
-    public function run(): void
+    public function run(DepositService $deposits): void
     {
-        // Usuários de demonstração (senha: password1). Saldo em centavos.
-        User::factory()->withBalance(100_00)->create([
-            'email' => 'alice@example.com',
-            'nickname' => 'alice',
-        ]);
+        $alice = User::factory()->create(['email' => 'alice@example.com', 'nickname' => 'alice']);
+        User::factory()->create(['email' => 'bob@example.com', 'nickname' => 'bob']);
 
-        User::factory()->create([
-            'email' => 'bob@example.com',
-            'nickname' => 'bob',
-        ]);
+        // O saldo inicial entra por um depósito de verdade, para o extrato bater com o saldo.
+        $deposits->deposit($alice, 100_00); // R$ 100,00
     }
 }

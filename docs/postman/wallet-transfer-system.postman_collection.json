@@ -1,0 +1,1241 @@
+{
+  "info": {
+    "name": "Wallet Transfer System",
+    "description": "# Wallet Transfer System: API\n\nColeção organizada na ordem de uso. Cada pasta tem **✅ Sucesso** e **❌ Erros esperados**.\n\n## Como usar\n1. Suba o projeto: `docker compose up -d`\n2. (Opcional) Usuários de demonstração: `docker compose exec app php artisan migrate:fresh --seed`\n   - **alice** (R$ 100,00) e **bob** (R$ 0,00), ambos com senha `password1`\n3. Rode **2. Autenticação → ✅ Sucesso → Login com nickname (alice)**. O token é salvo sozinho na variável `{{token}}`.\n   - Ou rode a coleção inteira (*Run collection*): as pastas estão na ordem certa.\n4. Todas as outras rotas já usam esse token (aba *Authorization* da coleção).\n\n> O usuário logado é sempre o do **último login**. Para agir como o Bob, rode o login do Bob.\n\n## Valores em centavos\nO campo `amount` é um **inteiro em centavos**: R$ 50,75 = `5075`. Isso evita erros de arredondamento de números decimais.\n\n## Variáveis da coleção\n| Variável | Para que serve |\n|---|---|\n| `base_url` | Endereço da API (`http://localhost:8000`) |\n| `token` | Preenchida pelo login/cadastro |\n| `transaction_id` | Preenchida pelo último depósito/transferência, usada no extrato e na reversão |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "transaction_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Saúde da API",
+      "description": "Confere se a API está no ar. Não exige login.",
+      "item": [
+        {
+          "name": "✅ Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/up",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "up"
+              ]
+            },
+            "description": "Rota nativa do Laravel. Responde 200 quando a aplicação está de pé.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Autenticação",
+      "description": "Cadastro, login, perfil e logout. **Cadastro e login são as únicas rotas públicas.**",
+      "item": [
+        {
+          "name": "✅ Sucesso",
+          "description": "",
+          "item": [
+            {
+              "name": "Cadastrar usuário",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "if (body.token) {",
+                      "    pm.collectionVariables.set(\"token\", body.token);",
+                      "    console.log(\"Token salvo para o usuário: \" + body.user.nickname);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Cria a conta e já devolve um token (o usuário entra direto).\n\n- `nickname`: letras, números e `_`, de 3 a 30 caracteres\n- `password`: mínimo 8 caracteres, com letras e números\n\nEmail e nickname são salvos em minúsculas.",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"usuario{{$randomInt}}@teste.com\",\n  \"nickname\": \"usuario_{{$randomInt}}\",\n  \"password\": \"senha123\",\n  \"password_confirmation\": \"senha123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Login com email (bob)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "if (body.token) {",
+                      "    pm.collectionVariables.set(\"token\", body.token);",
+                      "    console.log(\"Token salvo para o usuário: \" + body.user.nickname);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "O campo `login` aceita **email ou nickname**. Salva o token na variável `{{token}}`: a partir daqui, você age como o Bob.",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"login\": \"bob@example.com\",\n  \"password\": \"password1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Meu perfil",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "me"
+                  ]
+                },
+                "description": "Dados do usuário dono do token, incluindo o saldo."
+              }
+            },
+            {
+              "name": "Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "Revoga o token atual. Depois disso, ele não funciona mais: é preciso fazer login de novo."
+              }
+            },
+            {
+              "name": "Login com nickname (alice)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "if (body.token) {",
+                      "    pm.collectionVariables.set(\"token\", body.token);",
+                      "    console.log(\"Token salvo para o usuário: \" + body.user.nickname);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Mesmo login, agora com o nickname. **Deixa a Alice logada** para as próximas pastas (ela começa com R$ 100,00).",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"login\": \"alice\",\n  \"password\": \"password1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Erros esperados",
+          "description": "",
+          "item": [
+            {
+              "name": "Cadastro com dados inválidos",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Devolve `errors` com a mensagem de cada campo, em português.",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nao-e-email\",\n  \"nickname\": \"igor reis\",\n  \"password\": \"abc\",\n  \"password_confirmation\": \"xyz\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Cadastro com email/nickname já usados",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Email e nickname são únicos.",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"alice@example.com\",\n  \"nickname\": \"alice\",\n  \"password\": \"senha123\",\n  \"password_confirmation\": \"senha123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Login com senha errada",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Mensagem genérica de propósito: não revela se o usuário existe.\n\nApós 5 tentativas em 1 minuto, a API responde **429** (proteção contra força bruta).",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"login\": \"alice\",\n  \"password\": \"senha-errada1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Perfil sem token",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "me"
+                  ]
+                },
+                "description": "Toda rota fora cadastro/login exige `Authorization: Bearer <token>`.",
+                "auth": {
+                  "type": "noauth"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Carteira",
+      "description": "Saldo e depósito. **Faça login antes.**",
+      "item": [
+        {
+          "name": "✅ Sucesso",
+          "description": "",
+          "item": [
+            {
+              "name": "Ver saldo",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet"
+                  ]
+                },
+                "description": "`balance` em centavos e `balance_formatted` pronto para exibir."
+              }
+            },
+            {
+              "name": "Depositar R$ 50,75",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "if (body.transaction) pm.collectionVariables.set(\"transaction_id\", body.transaction.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "Soma ao saldo. Se o saldo estiver **negativo** (após uma reversão), o depósito quita a dívida primeiro.\n\nSalva o id em `{{transaction_id}}`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 5075\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Erros esperados",
+          "description": "",
+          "item": [
+            {
+              "name": "Depositar valor zero",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "O valor deve ser maior que zero.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Depositar com casas decimais",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "O valor vai em **centavos inteiros**: R$ 50,75 = `5075`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 50.75\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Depositar acima do limite",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "Limite de R$ 1.000.000,00 por operação.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 100000001\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Transferências",
+      "description": "Envio de saldo por **email ou nickname**. O fluxo do app é: buscar o destinatário, confirmar e transferir.",
+      "item": [
+        {
+          "name": "✅ Sucesso",
+          "description": "",
+          "item": [
+            {
+              "name": "1º Buscar destinatário (confirmação)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/users/lookup?identifier=bob",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "lookup"
+                  ],
+                  "query": [
+                    {
+                      "key": "identifier",
+                      "value": "bob"
+                    }
+                  ]
+                },
+                "description": "Usado pela tela de confirmação: *\"Transferir R$ 30,00 para @bob?\"*.\n\nDevolve só o nickname e o email mascarado, sem expor dados de terceiros."
+              }
+            },
+            {
+              "name": "2º Transferir R$ 30,00 para bob",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "if (body.transaction) pm.collectionVariables.set(\"transaction_id\", body.transaction.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/transfer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "transfer"
+                  ]
+                },
+                "description": "`recipient` aceita nickname ou email.\n\nO saldo é conferido com as contas **travadas no banco** (`lockForUpdate`), então duas transferências simultâneas nunca gastam o mesmo dinheiro.\n\nSalva o id em `{{transaction_id}}`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipient\": \"bob\",\n  \"amount\": 3000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Erros esperados",
+          "description": "",
+          "item": [
+            {
+              "name": "Saldo insuficiente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/transfer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "transfer"
+                  ]
+                },
+                "description": "A mensagem informa o saldo atual.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipient\": \"bob\",\n  \"amount\": 99999999\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Transferir para si mesmo",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/transfer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "transfer"
+                  ]
+                },
+                "description": "Logado como alice, tentando enviar para alice.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipient\": \"alice\",\n  \"amount\": 100\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Destinatário inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/transfer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "transfer"
+                  ]
+                },
+                "description": "\"Nenhum usuário encontrado com esse email ou nickname.\"",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipient\": \"usuario_fantasma\",\n  \"amount\": 100\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Extrato e Reversão",
+      "description": "Histórico de movimentações e estorno de operações.\n\n**Quem pode reverter:** quem enviou a transferência, ou o dono do depósito. Cada operação só pode ser revertida uma vez, e uma reversão não pode ser revertida.\n\nA reversão é aplicada **por inteiro**, mesmo que deixe o saldo de quem recebeu **negativo**.",
+      "item": [
+        {
+          "name": "✅ Sucesso",
+          "description": "",
+          "item": [
+            {
+              "name": "Listar extrato",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transactions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transactions"
+                  ]
+                },
+                "description": "Mais recentes primeiro, 15 por página (`?page=2`).\n\n- `direction`: `in` (entrou) ou `out` (saiu do seu saldo)\n- `can_reverse`: se você pode reverter esta operação"
+              }
+            },
+            {
+              "name": "Detalhar transação",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transactions/{{transaction_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transactions",
+                    "{{transaction_id}}"
+                  ]
+                },
+                "description": "Usa o id salvo pelo último depósito/transferência."
+              }
+            },
+            {
+              "name": "Reverter transação",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transactions/{{transaction_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transactions",
+                    "{{transaction_id}}",
+                    "reverse"
+                  ]
+                },
+                "description": "Cria uma operação inversa (`reversal`) e marca a original como `reversed`. **Nada é apagado:** o histórico fica auditável.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Enviei para a pessoa errada\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Erros esperados",
+          "description": "",
+          "item": [
+            {
+              "name": "Reverter de novo (já revertida)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transactions/{{transaction_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transactions",
+                    "{{transaction_id}}",
+                    "reverse"
+                  ]
+                },
+                "description": "Rode depois de **Reverter transação**.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Segunda tentativa\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Transação inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transactions/999999",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transactions",
+                    "999999"
+                  ]
+                },
+                "description": "Também é a resposta para transações de outros usuários: não revelamos que elas existem."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

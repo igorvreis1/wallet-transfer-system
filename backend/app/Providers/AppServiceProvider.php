@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\TransactionRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\EloquentTransactionRepository;
 use App\Repositories\EloquentUserRepository;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public array $bindings = [
         UserRepositoryInterface::class => EloquentUserRepository::class,
+        TransactionRepositoryInterface::class => EloquentTransactionRepository::class,
     ];
 
     public function boot(): void

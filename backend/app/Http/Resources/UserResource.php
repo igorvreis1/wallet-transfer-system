@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,7 +23,8 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'email' => $this->email,
             'nickname' => $this->nickname,
-            'balance' => $this->balance, // em centavos: o frontend formata para "R$ 5,67"
+            'balance' => $this->balance, // em centavos: R$ 5,67 = 567
+            'balance_formatted' => Money::format($this->balance),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

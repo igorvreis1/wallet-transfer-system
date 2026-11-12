@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,6 +17,20 @@ Route::prefix('auth')->middleware('throttle:auth')->group(function () {
 
 // Protegidas: exigem o header "Authorization: Bearer <token>".
 Route::middleware('auth:sanctum')->group(function () {
+    // Autenticação
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // Carteira
+    Route::get('wallet', [WalletController::class, 'show']);
+    Route::post('wallet/deposit', [WalletController::class, 'deposit']);
+    Route::post('wallet/transfer', [WalletController::class, 'transfer']);
+
+    // Busca de destinatário (limitada para dificultar varredura de usuários)
+    Route::get('users/lookup', [WalletController::class, 'lookupRecipient'])->middleware('throttle:30,1');
+
+    // Extrato e reversão
+    Route::get('transactions', [TransactionController::class, 'index']);
+    Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->whereNumber('transaction');
+    Route::post('transactions/{transaction}/reverse', [TransactionController::class, 'reverse'])->whereNumber('transaction');
 });

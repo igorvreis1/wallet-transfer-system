@@ -31,13 +31,19 @@ docker compose up -d --build
 
 Na primeira execução o container instala as dependências e aplica as migrations sozinho.
 
-Para criar usuários de demonstração (`alice` com R$ 100,00 e `bob`, senha `password1`):
+Para recriar o banco com usuários de demonstração (`alice` com R$ 100,00 e `bob` com R$ 0,00, ambos com a senha `password1`):
 
 ```bash
-docker compose exec app php artisan db:seed
+docker compose exec app php artisan migrate:fresh --seed
 ```
 
+## Testar no Postman
+
+Importe [docs/postman/wallet-transfer-system.postman_collection.json](docs/postman/wallet-transfer-system.postman_collection.json) no Postman (**Import → arquivo**). As pastas seguem a ordem de uso, cada uma dividida em **✅ Sucesso** e **❌ Erros esperados**, e o token é salvo sozinho após o login.
+
 ## Endpoints
+
+Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 
 | Método | Rota | Autenticação | Descrição |
 |---|---|---|---|
@@ -45,12 +51,19 @@ docker compose exec app php artisan db:seed
 | POST | `/api/auth/login` | Pública | Login por email **ou** nickname |
 | POST | `/api/auth/logout` | Bearer | Revoga o token atual |
 | GET | `/api/auth/me` | Bearer | Dados do usuário logado |
+| GET | `/api/wallet` | Bearer | Saldo atual |
+| POST | `/api/wallet/deposit` | Bearer | Depósito (`amount`) |
+| GET | `/api/users/lookup?identifier=` | Bearer | Confirma o destinatário antes de transferir |
+| POST | `/api/wallet/transfer` | Bearer | Transferência (`recipient` = email ou nickname, `amount`) |
+| GET | `/api/transactions` | Bearer | Extrato paginado |
+| GET | `/api/transactions/{id}` | Bearer | Detalhe de uma transação |
+| POST | `/api/transactions/{id}/reverse` | Bearer | Reverte um depósito ou uma transferência (`reason` opcional) |
 
 ## Status
 
 - [x] **Fase 1:** monorepo, ambiente Docker (MySQL, PHP-FPM, Nginx, Vite)
 - [x] **Fase 2:** autenticação (cadastro, login por email ou nickname, logout, token Bearer com Sanctum)
-- [ ] **Fase 3:** carteira (depósito, transferência, reversão)
+- [x] **Fase 3:** carteira (depósito, transferência, reversão, extrato) e coleção do Postman
 - [ ] **Fase 4:** testes unitários e de integração
 - [ ] **Fase 5:** frontend completo
-- [ ] **Fase 6:** observabilidade e coleção do Postman
+- [ ] **Fase 6:** observabilidade (log de erros)
