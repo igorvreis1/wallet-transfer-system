@@ -201,7 +201,47 @@ Arquivo: `docs/postman/wallet-transfer-system.postman_collection.json`.
 - Cada requisição tem uma descrição e um teste que confere o status HTTP esperado.
 - A coleção inteira pode ser executada de uma vez (*Run collection*): **25 requisições, 25 testes aprovados** com o banco recém-criado pelo seed.
 
-## 9. Tratamento de erros
+## 9. Testes automatizados
+
+```bash
+docker compose exec app php artisan test                       # todos
+docker compose exec app php artisan test --testsuite=Unit       # só unitários
+docker compose exec app php artisan test --filter=ReversalTest  # só um arquivo
+```
+
+### Banco de testes separado
+O MySQL tem dois bancos: `wallet` (desenvolvimento) e `wallet_testing` (testes). O `phpunit.xml` aponta os testes para `wallet_testing`, e o `tests/TestCase.php` tem uma **trava de segurança**: se por erro de configuração o banco não for `wallet_testing`, os testes param antes de executar qualquer coisa.
+
+O banco de testes é criado automaticamente na primeira subida do MySQL, por `docker/mysql/init/01-create-testing-database.sql`.
+
+Cada teste de integração usa `RefreshDatabase`: roda dentro de uma transação, que é desfeita (*rollback*) no final. Todo teste começa com o banco limpo e cria seus próprios dados, com **Alice** (R$ 100,00) e **Bob** (R$ 0,00) como usuários padrão (`$this->alice()` e `$this->bob()`).
+
+### Estrutura
+
+Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
+
+| Tipo | Pasta | O que testa | Arquivos |
+|---|---|---|---|
+| **Unitário** | `tests/Unit` | Uma classe isolada, sem API | `MoneyTest` (formatação), `TransactionReversalRulesTest` (regra de quem pode reverter), `TransferServiceTest` (service com **repositórios falsos/mocks**, sem banco) |
+| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest` |
+
+### Cobertura das regras do desafio
+| Requisito | Testado em |
+|---|---|
+| Cadastro e autenticação | `AuthTest` (12 testes: validação, unicidade, login por email/nickname, token, logout, força bruta, *mass assignment*) |
+| Depositar | `DepositTest` |
+| Depósito em saldo negativo soma ao valor | `DepositTest::test_deposito_em_saldo_negativo_quita_a_divida_primeiro` |
+| Enviar e receber | `TransferTest` |
+| Validar saldo antes da transferência | `TransferTest::test_transferencia_sem_saldo_e_recusada_e_nada_muda` |
+| Reversão por solicitação do usuário | `ReversalTest` (regras de quem pode, uma vez só, reversão de reversão) |
+| Reversão por inconsistência | `ReversalTest::test_comando_administrativo_reverte_por_inconsistencia_sem_ser_o_dono` |
+| Consistência saldo × extrato | `StatementTest::test_saldo_sempre_bate_com_a_soma_do_extrato` |
+
+O teste de unidade `TransferServiceTest` só é possível porque o service depende de **interfaces** (`UserRepositoryInterface`): no teste, o banco é substituído por um objeto falso. É a Inversão de Dependência (SOLID) na prática.
+
+A concorrência (várias transferências simultâneas) foi validada com requisições paralelas reais à API (seção 7). Ela não entra no PHPUnit porque cada teste roda numa única conexão com o banco.
+
+## 10. Tratamento de erros
 
 Toda resposta de erro da API segue o formato `{ "message": "..." }`, em português. Erros de validação também trazem `errors`, com as mensagens de cada campo. A configuração fica em `bootstrap/app.php`.
 
@@ -217,7 +257,7 @@ Toda resposta de erro da API segue o formato `{ "message": "..." }`, em portugu�
 
 Erros de negócio (`BusinessException`) **não** são registrados em log, porque são o sistema funcionando corretamente. Apenas erros inesperados serão registrados (fase 6).
 
-## 10. Comandos úteis
+## 11. Comandos úteis
 
 ```bash
 docker compose up -d --build          # sobe tudo

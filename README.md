@@ -37,6 +37,14 @@ Para recriar o banco com usuários de demonstração (`alice` com R$ 100,00 e `b
 docker compose exec app php artisan migrate:fresh --seed
 ```
 
+## Testes automatizados
+
+```bash
+docker compose exec app php artisan test
+```
+
+São 57 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
+
 ## Testar no Postman
 
 Importe [docs/postman/wallet-transfer-system.postman_collection.json](docs/postman/wallet-transfer-system.postman_collection.json) no Postman (**Import → arquivo**). As pastas seguem a ordem de uso, cada uma dividida em **✅ Sucesso** e **❌ Erros esperados**, e o token é salvo sozinho após o login.
@@ -64,6 +72,6 @@ Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 - [x] **Fase 1:** monorepo, ambiente Docker (MySQL, PHP-FPM, Nginx, Vite)
 - [x] **Fase 2:** autenticação (cadastro, login por email ou nickname, logout, token Bearer com Sanctum)
 - [x] **Fase 3:** carteira (depósito, transferência, reversão, extrato) e coleção do Postman
-- [ ] **Fase 4:** testes unitários e de integração
+- [x] **Fase 4:** testes unitários e de integração (57 testes, banco de testes separado)
 - [ ] **Fase 5:** frontend completo
 - [ ] **Fase 6:** observabilidade (log de erros)

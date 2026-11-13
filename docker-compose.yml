@@ -16,6 +16,7 @@ services:
       - "3307:3306" # 3307 no Windows, para não conflitar com um MySQL local
     volumes:
       - mysql_data:/var/lib/mysql # os dados sobrevivem quando o container é recriado
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro # cria o banco de testes na primeira subida
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 5s
