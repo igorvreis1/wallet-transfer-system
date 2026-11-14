@@ -23,6 +23,7 @@ class TransferRequest extends FormRequest
         return [
             'recipient' => ['required', 'string', 'max:255'],
             'amount' => $this->amountRules(),
+            'description' => ['nullable', 'string', 'max:140'], // mensagem opcional, como a do Pix
         ];
     }
 
@@ -34,6 +35,7 @@ class TransferRequest extends FormRequest
         return [
             'recipient.required' => 'Informe o email ou nickname de quem vai receber.',
             ...$this->amountMessages(),
+            'description.max' => 'A mensagem pode ter no máximo 140 caracteres.',
         ];
     }
 }

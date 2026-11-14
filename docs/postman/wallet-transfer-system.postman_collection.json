@@ -995,10 +995,10 @@
                     "transfer"
                   ]
                 },
-                "description": "`recipient` aceita nickname ou email.\n\nO saldo é conferido com as contas **travadas no banco** (`lockForUpdate`), então duas transferências simultâneas nunca gastam o mesmo dinheiro.\n\nSalva o id em `{{transaction_id}}`.",
+                "description": "`recipient` aceita nickname ou email. `description` é uma **mensagem opcional** (até 140 caracteres), visível para quem envia e quem recebe.\n\nO saldo é conferido com as contas **travadas no banco** (`lockForUpdate`), então duas transferências simultâneas nunca gastam o mesmo dinheiro.\n\nSalva o id em `{{transaction_id}}`.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"recipient\": \"bob\",\n  \"amount\": 3000\n}",
+                  "raw": "{\n  \"recipient\": \"bob\",\n  \"amount\": 3000,\n  \"description\": \"Almoço de sexta\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1013,6 +1013,54 @@
           "name": "❌ Erros esperados",
           "description": "",
           "item": [
+            {
+              "name": "Mensagem longa demais",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/transfer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "transfer"
+                  ]
+                },
+                "description": "\"A mensagem pode ter no máximo 140 caracteres.\"",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipient\": \"bob\",\n  \"amount\": 100,\n  \"description\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
             {
               "name": "Saldo insuficiente",
               "event": [

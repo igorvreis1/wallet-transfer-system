@@ -43,16 +43,17 @@ class TransferService
 
     /**
      * @param  int  $amount  Em centavos (> 0, garantido pela validação)
+     * @param  string|null  $description  Mensagem opcional para quem recebe (como a do Pix)
      *
      * @throws RecipientNotFoundException
      * @throws SelfTransferException
      * @throws InsufficientBalanceException
      */
-    public function transfer(User $sender, string $recipientIdentifier, int $amount): Transaction
+    public function transfer(User $sender, string $recipientIdentifier, int $amount, ?string $description = null): Transaction
     {
         $recipient = $this->resolveRecipient($sender, $recipientIdentifier);
 
-        return DB::transaction(function () use ($sender, $recipient, $amount) {
+        return DB::transaction(function () use ($sender, $recipient, $amount, $description) {
             // Trava os DOIS usuários. Outra operação com qualquer um deles espera esta terminar.
             $locked = $this->users->lockForUpdate([$sender->id, $recipient->id]);
             $from = $locked->get($sender->id);
@@ -73,6 +74,7 @@ class TransferService
                 'sender_id' => $from->id,
                 'receiver_id' => $to->id,
                 'amount' => $amount,
+                'description' => $description,
             ]);
         }, attempts: 3); // em caso de deadlock, o Laravel tenta de novo até 3 vezes
     }

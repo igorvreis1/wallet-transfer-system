@@ -24,7 +24,7 @@ class EloquentTransactionRepository implements TransactionRepositoryInterface
     public function findForUser(int $id, User $user): ?Transaction
     {
         return $this->queryForUser($user)
-            ->with(['sender', 'receiver'])
+            ->with(['sender', 'receiver', 'reversal'])
             ->find($id);
     }
 
@@ -44,7 +44,7 @@ class EloquentTransactionRepository implements TransactionRepositoryInterface
                     ->where(fn (Builder $q) => $q->where('sender_id', $user->id)->where('receiver_id', $otherId))
                     ->orWhere(fn (Builder $q) => $q->where('sender_id', $otherId)->where('receiver_id', $user->id)),
             ))
-            ->with(['sender', 'receiver']) // evita o problema N+1 ao montar o extrato
+            ->with(['sender', 'receiver', 'reversal']) // evita o problema N+1 ao montar o extrato
             ->latest('id')
             ->paginate($perPage)
             ->withQueryString(); // os links de página mantêm os filtros (?page=2&direction=out)

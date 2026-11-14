@@ -60,6 +60,7 @@ class WalletController extends Controller
             $request->user(),
             $request->validated('recipient'),
             (int) $request->validated('amount'),
+            trim((string) $request->validated('description')) ?: null, // mensagem vazia vira null
         );
 
         return $this->operationResponse($request, $transaction, 'Transferência realizada com sucesso.');

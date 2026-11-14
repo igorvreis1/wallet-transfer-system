@@ -38,9 +38,20 @@ class TransactionResource extends JsonResource
             'counterpart' => $this->type === TransactionType::Deposit || $counterpart === null
                 ? null
                 : $counterpart->nickname,
-            'reason' => $this->reason,
+            'description' => $this->description, // mensagem da transferência (como a do Pix)
+            'reason' => $this->reason,           // motivo, quando esta linha É uma reversão
             'reversal_of_id' => $this->reversal_of_id,
             'can_reverse' => $this->resource->isReversibleBy($me), // o frontend usa para mostrar o botão
+            // Até quando quem tem direito pode pedir a reversão (null para reversões, que não se revertem)
+            'reversible_until' => $this->type === TransactionType::Reversal
+                ? null
+                : $this->created_at?->copy()->addDays(Transaction::reversalWindowDays())->toIso8601String(),
+            // Se esta operação já foi revertida: quando e por quê
+            'reversed' => $this->whenLoaded('reversal', fn () => $this->reversal === null ? null : [
+                'id' => $this->reversal->id,
+                'reason' => $this->reversal->reason,
+                'created_at' => $this->reversal->created_at?->toIso8601String(),
+            ]),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
