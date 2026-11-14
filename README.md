@@ -43,7 +43,7 @@ docker compose exec app php artisan migrate:fresh --seed
 docker compose exec app php artisan test
 ```
 
-São 57 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
+São 65 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
 
 ## Testar no Postman
 
@@ -72,6 +72,8 @@ Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 - [x] **Fase 1:** monorepo, ambiente Docker (MySQL, PHP-FPM, Nginx, Vite)
 - [x] **Fase 2:** autenticação (cadastro, login por email ou nickname, logout, token Bearer com Sanctum)
 - [x] **Fase 3:** carteira (depósito, transferência, reversão, extrato) e coleção do Postman
-- [x] **Fase 4:** testes unitários e de integração (57 testes, banco de testes separado)
+- [x] **Fase 4:** testes unitários e de integração (65 testes, banco de testes separado)
 - [ ] **Fase 5:** frontend completo
 - [ ] **Fase 6:** observabilidade (log de erros)
+- [ ] **Fase 7 (extra):** app em Flutter consumindo a mesma API (backend multiplataforma)
+- [ ] **Fase 8 (extra):** multimoeda (BRL, USD, EUR) e câmbio entre as próprias carteiras

@@ -54,6 +54,10 @@ O `app` só inicia quando o MySQL passa no *healthcheck*. O `entrypoint.sh` inst
 6. **Depósito em conta com saldo negativo soma ao saldo existente**, quitando a dívida primeiro.
 7. Quem pode reverter: quem **enviou** a transferência, ou o **dono** do depósito.
 8. Uma operação só pode ser revertida **uma vez**, e uma reversão não pode ser revertida.
+9. **Prazo de reversão: 90 dias** a partir da operação, inspirado na devolução do Pix e configurável por `REVERSAL_WINDOW_DAYS`. O comando administrativo (inconsistência) não tem prazo.
+10. Receber uma transferência com saldo negativo também abate a dívida (mesmo efeito do depósito).
+
+> **Futuro:** regras de contestação (ex.: o destinatário poder contestar uma reversão, como no MED do Pix).
 
 ## 5. Modelagem de dados
 
@@ -169,14 +173,17 @@ Teste realizado: com saldo para exatamente 6 transferências de R$ 30,00, foram 
 | Depósito: só o **dono** pode reverter | 403 "Apenas o dono do depósito pode revertê-lo." |
 | Uma reversão não pode ser revertida | 403 "Uma reversão não pode ser revertida." |
 | Cada operação só é revertida uma vez | 409 "Esta transação já foi revertida." |
+| Até **90 dias** após a operação (`REVERSAL_WINDOW_DAYS`) | 422 "O prazo para reverter esta transação expirou. Reversões podem ser solicitadas em até 90 dias." |
 | Transação inexistente ou de outra pessoa | 404 "Transação não encontrada." |
+
+Fora do prazo, o extrato também devolve `can_reverse: false`, e o frontend esconde o botão de reverter. A regra fica num único lugar (`Transaction::isReversibleBy`, que combina `canRequestReversal` e `isWithinReversalWindow`), usado tanto pelo service quanto pela resposta da API.
 
 Como funciona:
 - **Nada é apagado.** A original vira `reversed` e uma nova linha `reversal` registra o estorno, então o histórico é auditável.
 - A reversão é aplicada **por inteiro**, mesmo que deixe o saldo de quem recebeu **negativo** (modelo de estorno/chargeback). O próximo depósito quita a dívida.
 - A operação original é travada (`lockForUpdate`), e o índice `UNIQUE` em `reversal_of_id` garante no próprio banco que não existam duas reversões da mesma operação.
 
-**Reversão por inconsistência (uso administrativo).** Para quando o suporte identifica um problema, sem exigir ser o dono da operação:
+**Reversão por inconsistência (uso administrativo).** Para quando o suporte identifica um problema, sem exigir ser o dono da operação e **sem prazo**:
 
 ```bash
 docker compose exec app php artisan wallet:reverse 15 --reason="Transferência duplicada"
@@ -234,6 +241,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Enviar e receber | `TransferTest` |
 | Validar saldo antes da transferência | `TransferTest::test_transferencia_sem_saldo_e_recusada_e_nada_muda` |
 | Reversão por solicitação do usuário | `ReversalTest` (regras de quem pode, uma vez só, reversão de reversão) |
+| Prazo de 90 dias para reverter | `ReversalTest` e `TransactionReversalRulesTest` (no limite exato, 1 segundo depois, configurável, admin sem prazo). Usam a "viagem no tempo" do Laravel (`$this->travel(90)->days()`). |
 | Reversão por inconsistência | `ReversalTest::test_comando_administrativo_reverte_por_inconsistencia_sem_ser_o_dono` |
 | Consistência saldo × extrato | `StatementTest::test_saldo_sempre_bate_com_a_soma_do_extrato` |
 

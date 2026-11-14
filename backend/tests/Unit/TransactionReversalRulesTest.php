@@ -63,6 +63,24 @@ class TransactionReversalRulesTest extends TestCase
         $this->assertFalse($transfer->isReversibleBy($this->alice));
     }
 
+    public function test_ainda_pode_reverter_no_ultimo_dia_do_prazo_de_90_dias(): void
+    {
+        $this->freezeSecond(); // congela o relógio para a conta de datas ser exata
+        $transfer = $this->transaction(TransactionType::Transfer, sender: 1, receiver: 2);
+        $transfer->created_at = now()->subDays(90); // exatamente no limite
+
+        $this->assertTrue($transfer->isReversibleBy($this->alice));
+    }
+
+    public function test_nao_pode_reverter_depois_do_prazo_de_90_dias(): void
+    {
+        $this->freezeSecond();
+        $transfer = $this->transaction(TransactionType::Transfer, sender: 1, receiver: 2);
+        $transfer->created_at = now()->subDays(90)->subSecond(); // 1 segundo além do limite
+
+        $this->assertFalse($transfer->isReversibleBy($this->alice));
+    }
+
     private function userWithId(int $id): User
     {
         $user = new User;

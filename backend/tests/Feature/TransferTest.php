@@ -87,6 +87,18 @@ class TransferTest extends TestCase
             ->assertJsonPath('message', 'Saldo insuficiente. Seu saldo atual é -R$ 10,00.');
     }
 
+    public function test_receber_transferencia_com_saldo_negativo_abate_a_divida(): void
+    {
+        // Mesmo efeito do depósito: o valor recebido soma ao saldo, quitando a dívida primeiro.
+        $alice = $this->alice(100_00);
+        $bob = $this->bob(-30_00);
+        Sanctum::actingAs($alice);
+
+        $this->postJson('/api/wallet/transfer', ['recipient' => 'bob', 'amount' => 50_00])->assertCreated();
+
+        $this->assertSame(20_00, $bob->fresh()->balance); // -30 + 50 = 20
+    }
+
     public function test_nao_pode_transferir_para_si_mesmo(): void
     {
         Sanctum::actingAs($this->alice());

@@ -5,6 +5,7 @@ namespace App\Services\Wallet;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\ReversalNotAllowedException;
+use App\Exceptions\ReversalWindowExpiredException;
 use App\Exceptions\TransactionAlreadyReversedException;
 use App\Exceptions\TransactionNotFoundException;
 use App\Models\Transaction;
@@ -36,6 +37,7 @@ class ReversalService
      * @throws TransactionNotFoundException
      * @throws TransactionAlreadyReversedException
      * @throws ReversalNotAllowedException
+     * @throws ReversalWindowExpiredException
      */
     public function reverse(int $transactionId, ?User $requestedBy, ?string $reason = null): Transaction
     {
@@ -88,8 +90,17 @@ class ReversalService
             throw new TransactionAlreadyReversedException;
         }
 
-        if ($requestedBy !== null && ! $original->isReversibleBy($requestedBy)) {
+        // Daqui para baixo, só vale para pedidos do usuário. O sistema (wallet:reverse) não tem dono nem prazo.
+        if ($requestedBy === null) {
+            return;
+        }
+
+        if (! $original->canRequestReversal($requestedBy)) {
             throw new ReversalNotAllowedException($original->type);
+        }
+
+        if (! $original->isWithinReversalWindow()) {
+            throw new ReversalWindowExpiredException(Transaction::reversalWindowDays());
         }
     }
 }

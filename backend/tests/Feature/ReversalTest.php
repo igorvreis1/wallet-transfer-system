@@ -135,6 +135,80 @@ class ReversalTest extends TestCase
         $this->assertSame(0, $bob->fresh()->balance);
     }
 
+    public function test_reversao_e_permitida_ate_o_ultimo_segundo_do_prazo_de_90_dias(): void
+    {
+        $this->freezeSecond();
+        $alice = $this->alice(100_00);
+        $this->bob();
+        $transfer = $this->transfer($alice, 'bob', 30_00);
+
+        $this->travel(90)->days(); // "viaja no tempo": agora é exatamente 90 dias depois
+
+        Sanctum::actingAs($alice);
+        $this->postJson("/api/transactions/{$transfer->id}/reverse")->assertCreated();
+    }
+
+    public function test_reversao_depois_de_90_dias_e_recusada_com_mensagem_clara(): void
+    {
+        $this->freezeSecond();
+        $alice = $this->alice(100_00);
+        $bob = $this->bob();
+        $transfer = $this->transfer($alice, 'bob', 30_00);
+
+        $this->travelTo(now()->addDays(90)->addSecond()); // 1 segundo depois do prazo
+
+        Sanctum::actingAs($alice);
+        $this->postJson("/api/transactions/{$transfer->id}/reverse")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'O prazo para reverter esta transação expirou. Reversões podem ser solicitadas em até 90 dias.');
+
+        // nada muda
+        $this->assertSame(70_00, $alice->fresh()->balance);
+        $this->assertSame(30_00, $bob->fresh()->balance);
+        $this->assertSame('completed', $transfer->fresh()->status->value);
+    }
+
+    public function test_extrato_esconde_o_botao_de_reverter_depois_do_prazo(): void
+    {
+        $alice = $this->alice(100_00);
+        $this->bob();
+        $this->transfer($alice, 'bob', 30_00);
+
+        Sanctum::actingAs($alice);
+        $this->getJson('/api/transactions')->assertJsonPath('data.0.can_reverse', true);
+
+        $this->travel(91)->days();
+        $this->getJson('/api/transactions')->assertJsonPath('data.0.can_reverse', false);
+    }
+
+    public function test_comando_administrativo_reverte_mesmo_depois_do_prazo(): void
+    {
+        $alice = $this->alice(100_00);
+        $this->bob();
+        $transfer = $this->transfer($alice, 'bob', 30_00);
+
+        $this->travel(365)->days(); // um ano depois: o usuário não pode mais, o suporte pode
+
+        $this->artisan('wallet:reverse', ['transaction' => $transfer->id])->assertSuccessful();
+
+        $this->assertSame(100_00, $alice->fresh()->balance);
+    }
+
+    public function test_o_prazo_pode_ser_alterado_por_configuracao(): void
+    {
+        config(['wallet.reversal_window_days' => 7]); // ex.: REVERSAL_WINDOW_DAYS=7 no .env
+        $alice = $this->alice(100_00);
+        $this->bob();
+        $transfer = $this->transfer($alice, 'bob', 30_00);
+
+        $this->travel(8)->days();
+
+        Sanctum::actingAs($alice);
+        $this->postJson("/api/transactions/{$transfer->id}/reverse")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'O prazo para reverter esta transação expirou. Reversões podem ser solicitadas em até 7 dias.');
+    }
+
     /**
      * Faz uma transferência pela API e devolve a transação criada.
      */

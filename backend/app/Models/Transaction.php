@@ -75,21 +75,46 @@ class Transaction extends Model
     }
 
     /**
-     * Regra de quem pode reverter (fonte única, usada pelo service e pela API):
-     * - transferência: só quem ENVIOU;
-     * - depósito: só o DONO;
-     * - reversão nunca é revertida, e cada operação só é revertida uma vez.
+     * Regra completa para o USUÁRIO reverter (fonte única, usada pelo service e pela API):
+     * - ainda não revertida;
+     * - é quem tem direito de pedir (ver canRequestReversal);
+     * - dentro do prazo (ver isWithinReversalWindow).
      */
     public function isReversibleBy(User $user): bool
     {
-        if ($this->status !== TransactionStatus::Completed) {
-            return false;
-        }
+        return $this->status === TransactionStatus::Completed
+            && $this->canRequestReversal($user)
+            && $this->isWithinReversalWindow();
+    }
 
+    /**
+     * Quem pode pedir a reversão:
+     * - transferência: só quem ENVIOU;
+     * - depósito: só o DONO;
+     * - reversão: ninguém (estorno de estorno não existe).
+     */
+    public function canRequestReversal(User $user): bool
+    {
         return match ($this->type) {
             TransactionType::Transfer => $this->sender_id === $user->id,
             TransactionType::Deposit => $this->receiver_id === $user->id,
             TransactionType::Reversal => false,
         };
+    }
+
+    /**
+     * Prazo para o usuário pedir reversão (config/wallet.php, padrão 90 dias, como a devolução do Pix).
+     * Uma transação ainda não gravada (sem created_at) conta como recém-criada.
+     */
+    public function isWithinReversalWindow(): bool
+    {
+        $createdAt = $this->created_at ?? now();
+
+        return $createdAt->greaterThanOrEqualTo(now()->subDays(self::reversalWindowDays()));
+    }
+
+    public static function reversalWindowDays(): int
+    {
+        return (int) config('wallet.reversal_window_days');
     }
 }
