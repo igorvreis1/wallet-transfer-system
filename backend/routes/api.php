@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\WalletController;
@@ -20,6 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Autenticação
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // Conta (privacidade: o email pode ser oculto, o nickname é sempre público)
+    Route::patch('account/privacy', [AccountController::class, 'updatePrivacy']);
 
     // Carteira
     Route::get('wallet', [WalletController::class, 'show']);

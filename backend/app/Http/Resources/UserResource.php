@@ -23,6 +23,7 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'email' => $this->email,
             'nickname' => $this->nickname,
+            'email_visible' => $this->email_visible, // preferência de privacidade (o próprio usuário vê o email sempre)
             'balance' => $this->balance, // em centavos: R$ 5,67 = 567
             'balance_formatted' => Money::format($this->balance),
             'created_at' => $this->created_at?->toIso8601String(),

@@ -15,12 +15,18 @@ use Illuminate\Support\Collection;
 interface UserRepositoryInterface
 {
     /**
-     * Busca pelo email ou pelo nickname (o que o usuário digitou).
+     * Busca PÚBLICA, para encontrar OUTRA pessoa (transferência, confirmação, filtro do extrato).
+     * O nickname sempre encontra; o email só encontra se o dono deixou o email visível.
      */
     public function findByEmailOrNickname(string $identifier): ?User;
 
     /**
-     * @param  array{email: string, nickname: string, password: string}  $data
+     * Busca para o LOGIN: o próprio dono sempre pode entrar com o email, mesmo oculto.
+     */
+    public function findForLogin(string $identifier): ?User;
+
+    /**
+     * @param  array{email: string, nickname: string, password: string, email_visible?: bool}  $data
      */
     public function create(array $data): User;
 

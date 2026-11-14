@@ -32,6 +32,7 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email:rfc,strict', 'max:255', 'unique:users,email'],
             'nickname' => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-z0-9_]+$/', 'unique:users,nickname'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers()],
+            'email_visible' => ['sometimes', 'boolean'], // opcional: o padrão é visível
         ];
     }
 

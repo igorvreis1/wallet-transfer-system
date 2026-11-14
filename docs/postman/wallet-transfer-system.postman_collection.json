@@ -227,6 +227,102 @@
               }
             },
             {
+              "name": "Ocultar meu email",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/account/privacy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "account",
+                    "privacy"
+                  ]
+                },
+                "description": "O **nickname é sempre público**; o email pode ser oculto.\n\nOculto, ninguém vê o email (nem mascarado) e ninguém consegue transferir ou buscar por ele, como se não existisse. O próprio dono continua entrando com o email normalmente.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email_visible\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Mostrar meu email",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/account/privacy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "account",
+                    "privacy"
+                  ]
+                },
+                "description": "Volta a deixar o email visível (o padrão).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email_visible\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
               "name": "Logout",
               "event": [
                 {
@@ -511,6 +607,54 @@
                 "description": "Toda rota fora cadastro/login exige `Authorization: Bearer <token>`.",
                 "auth": {
                   "type": "noauth"
+                }
+              }
+            },
+            {
+              "name": "Privacidade com valor inválido",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/account/privacy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "account",
+                    "privacy"
+                  ]
+                },
+                "description": "`email_visible` precisa ser `true` ou `false`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email_visible\": \"talvez\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
               }
             }

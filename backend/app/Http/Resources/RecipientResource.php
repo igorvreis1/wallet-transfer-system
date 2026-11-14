@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Dados mínimos do destinatário para a tela de confirmação.
- * Não expõe saldo nem o email completo de terceiros.
+ * Não expõe saldo nem o email completo de terceiros. Se o email estiver oculto, nem o mascarado aparece.
  *
  * @mixin User
  */
@@ -21,7 +21,7 @@ class RecipientResource extends JsonResource
     {
         return [
             'nickname' => $this->nickname,
-            'email_masked' => self::maskEmail($this->email),
+            'email_masked' => $this->email_visible ? self::maskEmail($this->email) : null,
         ];
     }
 

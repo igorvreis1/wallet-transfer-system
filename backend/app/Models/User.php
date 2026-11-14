@@ -14,8 +14,9 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $email
  * @property string $nickname
  * @property int $balance Saldo em centavos
+ * @property bool $email_visible Se outras pessoas podem ver e usar o email (o nickname é sempre público)
  */
-#[Fillable(['email', 'nickname', 'password'])] // balance fica de fora: só os services de carteira alteram o saldo
+#[Fillable(['email', 'nickname', 'password', 'email_visible'])] // balance fica de fora: só os services de carteira alteram o saldo
 #[Hidden(['password'])]
 class User extends Authenticatable
 {
@@ -29,6 +30,7 @@ class User extends Authenticatable
      */
     protected $attributes = [
         'balance' => 0,
+        'email_visible' => true,
     ];
 
     /**
@@ -39,6 +41,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'balance' => 'integer',
+            'email_visible' => 'boolean',
         ];
     }
 }

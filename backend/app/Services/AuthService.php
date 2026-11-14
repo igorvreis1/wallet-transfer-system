@@ -22,7 +22,7 @@ class AuthService
     /**
      * Cria o usuário e já devolve um token, para ele entrar direto após o cadastro.
      *
-     * @param  array{email: string, nickname: string, password: string}  $data
+     * @param  array{email: string, nickname: string, password: string, email_visible?: bool}  $data
      * @return array{user: User, token: string}
      */
     public function register(array $data): array
@@ -39,7 +39,7 @@ class AuthService
      */
     public function login(string $identifier, string $password): array
     {
-        $user = $this->users->findByEmailOrNickname($identifier);
+        $user = $this->users->findForLogin($identifier);
 
         if ($user === null || ! Hash::check($password, $user->password)) {
             throw new InvalidCredentialsException;

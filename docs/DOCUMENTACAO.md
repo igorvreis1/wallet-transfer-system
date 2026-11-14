@@ -56,6 +56,7 @@ O `app` só inicia quando o MySQL passa no *healthcheck*. O `entrypoint.sh` inst
 8. Uma operação só pode ser revertida **uma vez**, e uma reversão não pode ser revertida.
 9. **Prazo de reversão: 90 dias** a partir da operação, inspirado na devolução do Pix e configurável por `REVERSAL_WINDOW_DAYS`. O comando administrativo (inconsistência) não tem prazo.
 10. Receber uma transferência com saldo negativo também abate a dívida (mesmo efeito do depósito).
+11. **Privacidade do email:** o **nickname é sempre público** (é a "chave" da carteira). O email é visível por padrão, mas o usuário pode ocultá-lo no cadastro ou depois (`PATCH /api/account/privacy`). Oculto, ele não aparece para ninguém (nem mascarado) e **não encontra o usuário** na busca, na transferência ou no filtro do extrato, porque uma busca que achasse o dono revelaria de quem é o email. O próprio dono continua entrando com o email normalmente.
 
 > **Futuro:** regras de contestação (ex.: o destinatário poder contestar uma reversão, como no MED do Pix).
 
@@ -224,7 +225,7 @@ Arquivo: `docs/postman/wallet-transfer-system.postman_collection.json`.
 - O login salva o token na variável `{{token}}`, e as demais rotas o usam automaticamente.
 - Depósito e transferência salvam o id em `{{transaction_id}}`, usado no detalhe e na reversão.
 - Cada requisição tem uma descrição e um teste que confere o status HTTP esperado.
-- A coleção inteira pode ser executada de uma vez (*Run collection*): **29 requisições, 29 testes aprovados** com o banco recém-criado pelo seed.
+- A coleção inteira pode ser executada de uma vez (*Run collection*): **32 requisições, 32 testes aprovados** com o banco recém-criado pelo seed.
 
 ## 9. Testes automatizados
 
@@ -248,7 +249,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Tipo | Pasta | O que testa | Arquivos |
 |---|---|---|---|
 | **Unitário** | `tests/Unit` | Uma classe isolada, sem API | `MoneyTest` (formatação), `TransactionReversalRulesTest` (regra de quem pode reverter), `TransferServiceTest` (service com **repositórios falsos/mocks**, sem banco) |
-| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest` |
+| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest`, `EmailPrivacyTest` |
 
 ### Cobertura das regras do desafio
 | Requisito | Testado em |
@@ -263,6 +264,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Reversão por inconsistência | `ReversalTest::test_comando_administrativo_reverte_por_inconsistencia_sem_ser_o_dono` |
 | Consistência saldo × extrato | `StatementTest::test_saldo_sempre_bate_com_a_soma_do_extrato` |
 | Filtros do extrato (período, direção, tipo, contraparte) | `StatementFilterTest` (bordas do dia no horário de Brasília, filtros combinados, nunca mostra transações de terceiros, validação) |
+| Privacidade do email (nickname sempre público) | `EmailPrivacyTest` (padrão visível, cadastro oculto, busca/transferência/filtro pelo email oculto não encontram, login do dono continua, alternar a preferência) |
 
 O teste de unidade `TransferServiceTest` só é possível porque o service depende de **interfaces** (`UserRepositoryInterface`): no teste, o banco é substituído por um objeto falso. É a Inversão de Dependência (SOLID) na prática.
 
