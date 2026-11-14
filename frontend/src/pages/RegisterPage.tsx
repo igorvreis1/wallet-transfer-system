@@ -111,7 +111,7 @@ export function RegisterPage() {
           required
         />
 
-        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
+        <Button type="submit" size="lg" fullWidth loading={loading} loadingText="Criando sua conta" className="mt-1">
           Criar conta <ArrowRight className="size-4" />
         </Button>
       </form>

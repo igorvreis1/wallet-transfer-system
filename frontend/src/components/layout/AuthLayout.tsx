@@ -1,5 +1,6 @@
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ShieldCheck, Smartphone } from 'lucide-react'
 import { motion } from 'motion/react'
+import { motionTokens } from '../../lib/motion'
 import type { ReactNode } from 'react'
 import { Logo } from '../ui/Logo'
 
@@ -19,7 +20,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            transition={motionTokens.enter}
             className="w-full max-w-[400px]"
           >
             <h1 className="text-[26px] font-semibold tracking-tight">{title}</h1>
@@ -102,7 +103,7 @@ function PreviewCard() {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: [0, -6, 0] }}
-      transition={{ opacity: { duration: 0.6, delay: 0.2 }, y: { duration: 6, repeat: Infinity, ease: 'easeInOut' } }}
+      transition={{ opacity: { duration: 1, delay: 0.3 }, y: { duration: motionTokens.floatCycle, repeat: Infinity, ease: 'easeInOut' } }}
       className="mt-10 max-w-sm rounded-card border border-accent-line/70 bg-gradient-to-br from-[#141826] to-surface p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]"
     >
       <div className="flex items-center justify-between text-[12px] text-muted">

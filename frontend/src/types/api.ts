@@ -33,6 +33,58 @@ export interface LoginPayload {
   password: string
 }
 
+// ---------------------------------------------------------------- carteira
+
+export type TransactionType = 'deposit' | 'transfer' | 'reversal'
+export type TransactionStatus = 'completed' | 'reversed'
+
+/** Uma linha do extrato, sempre do ponto de vista de quem está logado. */
+export interface Transaction {
+  id: number
+  type: TransactionType
+  type_label: string
+  status: TransactionStatus
+  status_label: string
+  /** "in" = entrou no meu saldo; "out" = saiu */
+  direction: 'in' | 'out'
+  amount: number
+  amount_formatted: string
+  /** Nickname da outra pessoa (null em depósito) */
+  counterpart: string | null
+  /** Mensagem da transferência (opcional, como a do Pix) */
+  description: string | null
+  /** Motivo, quando esta linha É uma reversão */
+  reason: string | null
+  reversal_of_id: number | null
+  can_reverse: boolean
+  /** Até quando pode ser revertida (null em reversões) */
+  reversible_until: string | null
+  /** Se esta operação já foi revertida: quando e por quê */
+  reversed?: { id: number; reason: string | null; created_at: string | null } | null
+  created_at: string | null
+}
+
+/** Resposta de depósito, transferência e reversão */
+export interface OperationResponse {
+  message: string
+  transaction: Transaction
+  balance: number
+  balance_formatted: string
+}
+
+/** Destinatário para a tela de confirmação (email mascarado ou null se oculto) */
+export interface Recipient {
+  nickname: string
+  email_masked: string | null
+}
+
+/** Lista paginada do Laravel */
+export interface Paginated<T> {
+  data: T[]
+  links: { first: string | null; last: string | null; prev: string | null; next: string | null }
+  meta: { current_page: number; last_page: number; per_page: number; total: number }
+}
+
 /** Erros de validação (422): campo → lista de mensagens */
 export type ValidationErrors = Record<string, string[]>
 

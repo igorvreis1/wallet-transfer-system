@@ -35,7 +35,7 @@ export function InfoTooltip({ text, label = 'Mais informações' }: { text: stri
           // Alinhado à esquerda do ícone (que fica logo após o rótulo), para nunca sair da tela no celular.
           'pointer-events-none absolute bottom-full -left-16 z-20 mb-2 w-[min(15rem,calc(100vw-2rem))] rounded-[10px]',
           'border border-line-strong bg-surface-3 px-3 py-2 text-[12px] leading-snug font-normal text-fg',
-          'shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-all duration-150 ease-out-soft',
+          'shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-all duration-250 ease-out-soft',
           open ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0',
         ].join(' ')}
       >

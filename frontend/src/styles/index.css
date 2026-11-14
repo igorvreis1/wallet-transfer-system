@@ -72,27 +72,24 @@
     outline-offset: 2px;
   }
 
+  /*
+   * Acessibilidade: quem desliga as animações no sistema (Windows: Efeitos de animação)
+   * vê tudo parado. Atenção: só encurtar a duração NÃO basta. Uma animação infinita
+   * com 0.01ms fica piscando milhares de vezes por segundo. Por isso roda UMA vez só.
+   */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+    /* Transições também param, exceto as só de cor ([data-color-transition]), que não movem nada */
+    *:not([data-color-transition]),
+    *::before,
+    *::after {
       transition-duration: 0.01ms !important;
     }
-  }
-}
-
-/* Pontinhos de carregamento: sobem levemente e acendem, um depois do outro */
-@keyframes dot-breathe {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-    transform: translateY(0) scale(0.85);
-  }
-  40% {
-    opacity: 1;
-    transform: translateY(-2px) scale(1);
   }
 }
 

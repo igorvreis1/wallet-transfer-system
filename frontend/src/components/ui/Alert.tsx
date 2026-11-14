@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import { motionTokens } from '../../lib/motion'
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
@@ -22,7 +23,7 @@ export function Alert({ tone, children }: { tone: Tone; children: ReactNode }) {
           initial={{ opacity: 0, height: 0, y: -4 }}
           animate={{ opacity: 1, height: 'auto', y: 0 }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          transition={motionTokens.alert}
           className="overflow-hidden"
         >
           <div className={cn('flex items-start gap-2.5 rounded-field border px-3.5 py-3 text-[13px] leading-snug', tones[tone].box)}>

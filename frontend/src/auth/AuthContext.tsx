@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshUser,
       setBalance,
+      updateUser: setUser,
       notice,
       clearNotice: () => setNotice(null),
     }),

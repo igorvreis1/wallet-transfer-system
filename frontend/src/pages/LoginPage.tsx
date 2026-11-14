@@ -65,7 +65,7 @@ export function LoginPage() {
           required
         />
 
-        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-1">
+        <Button type="submit" size="lg" fullWidth loading={loading} loadingText="Entrando" className="mt-1">
           Entrar <ArrowRight className="size-4" />
         </Button>
       </form>

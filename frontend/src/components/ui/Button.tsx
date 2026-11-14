@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../../lib/cn'
-import { LoadingDots } from './LoadingDots'
+import { TypingDots } from './TypingDots'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type Size = 'md' | 'lg'
@@ -9,6 +9,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   size?: Size
   loading?: boolean
+  /** Texto mostrado enquanto carrega, sem pontos (ex.: "Entrando"). As reticências são animadas. */
+  loadingText?: string
   icon?: ReactNode
   fullWidth?: boolean
 }
@@ -32,6 +34,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
+  loadingText,
   icon,
   fullWidth = false,
   className,
@@ -42,35 +45,39 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
+      // Troca de COR não é movimento: continua suave mesmo com "reduzir movimento" no sistema.
+      data-color-transition
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'relative inline-flex select-none items-center justify-center gap-2 rounded-full font-medium',
-        'transition-[background-color,border-color,color,transform] duration-200 ease-out-soft active:scale-[0.98]',
+        'relative isolate inline-flex select-none items-center justify-center gap-2 overflow-hidden rounded-full font-medium',
+        'transition-[background-color,border-color,color,transform] ease-out-soft active:scale-[0.98] motion-reduce:active:scale-100',
+        // Ao começar a carregar, escurece devagar (1,2s); hover e o resto continuam rápidos.
+        loading ? 'duration-[1200ms]' : 'duration-200',
         'disabled:pointer-events-none',
-        !loading && 'disabled:opacity-50', // carregando continua com a cor cheia, só "pensando"
-        variants[variant],
+        !loading && 'disabled:opacity-50',
+        // Carregando: o botão "inverte" (fundo preto, borda e texto brancos).
+        loading ? 'border border-fg bg-bg text-fg' : variants[variant],
         sizes[size],
         fullWidth && 'w-full',
         className,
       )}
       {...props}
     >
-      {/* O conteúdo fica invisível (mas ocupando espaço) para o botão não mudar de tamanho. */}
-      <span
-        className={cn(
-          'inline-flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out-soft',
-          loading && 'scale-95 opacity-0',
-        )}
-      >
-        {icon}
-        {children}
-      </span>
-      {loading && (
-        <span className="absolute inset-0 grid place-items-center">
-          <LoadingDots />
-          <span className="sr-only">Carregando…</span>
+      {loading ? (
+        // O texto fica parado; só as reticências mudam, num espaço de largura fixa.
+        <span className="inline-flex items-baseline">
+          {/* espaço igual ao das reticências, à esquerda, para o texto ficar centralizado */}
+          <span aria-hidden="true" className="inline-block w-[1.1em]" />
+          {loadingText ?? children}
+          <TypingDots />
+          <span className="sr-only">, carregando</span>
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-2">
+          {icon}
+          {children}
         </span>
       )}
     </button>

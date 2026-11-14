@@ -13,6 +13,8 @@ export interface AuthContextValue {
   refreshUser: () => Promise<void>
   /** Atualiza só o saldo, com o valor que a própria operação devolveu. */
   setBalance: (balance: number, formatted: string) => void
+  /** Substitui os dados do usuário (ex.: depois de mudar a privacidade). */
+  updateUser: (user: User) => void
   /** Motivo da última saída forçada (ex.: sessão expirada), para mostrar no login. */
   notice: string | null
   clearNotice: () => void
