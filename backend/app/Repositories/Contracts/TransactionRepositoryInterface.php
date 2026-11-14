@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
+use App\Data\StatementFilters;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -24,9 +25,10 @@ interface TransactionRepositoryInterface
     public function findForUser(int $id, User $user): ?Transaction;
 
     /**
-     * Extrato do usuário, mais recentes primeiro.
+     * Extrato do usuário, mais recentes primeiro, com filtros opcionais.
+     * Os filtros só RESTRINGEM o resultado: nunca mostram transações de que o usuário não participou.
      *
      * @return LengthAwarePaginator<int, Transaction>
      */
-    public function paginateForUser(User $user, int $perPage = 15): LengthAwarePaginator;
+    public function paginateForUser(User $user, StatementFilters $filters = new StatementFilters, int $perPage = 15): LengthAwarePaginator;
 }

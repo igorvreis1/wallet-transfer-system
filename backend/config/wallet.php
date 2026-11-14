@@ -13,4 +13,10 @@ return [
     */
     'reversal_window_days' => (int) env('REVERSAL_WINDOW_DAYS', 90),
 
+    /*
+    | Fuso horário do usuário. O banco grava em UTC; os filtros de data do extrato
+    | ("from" e "to") são interpretados como dias do calendário neste fuso.
+    */
+    'timezone' => env('WALLET_TIMEZONE', 'America/Sao_Paulo'),
+
 ];

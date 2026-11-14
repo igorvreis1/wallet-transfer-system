@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Data\StatementFilters;
 use App\Exceptions\TransactionNotFoundException;
+use App\Exceptions\UserNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Wallet\ReverseTransactionRequest;
+use App\Http\Requests\Wallet\StatementFilterRequest;
 use App\Http\Resources\TransactionResource;
 use App\Repositories\Contracts\TransactionRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\Wallet\ReversalService;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
@@ -18,15 +22,26 @@ class TransactionController extends Controller
     public function __construct(
         private readonly TransactionRepositoryInterface $transactions,
         private readonly ReversalService $reversals,
+        private readonly UserRepositoryInterface $users,
     ) {}
 
     /**
-     * GET /api/transactions: extrato paginado (?page=2).
+     * GET /api/transactions: extrato paginado, com filtros opcionais
+     * (?from=2026-11-01&to=2026-11-30&direction=in|out&type=deposit|transfer|reversal&counterpart=bob&page=2).
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(StatementFilterRequest $request): AnonymousResourceCollection
     {
+        $counterpartId = null;
+
+        if ($request->filled('counterpart')) {
+            $counterpartId = $this->users->findByEmailOrNickname($request->validated('counterpart'))?->id
+                ?? throw new UserNotFoundException;
+        }
+
+        $filters = StatementFilters::fromInput($request->validated(), $counterpartId);
+
         return TransactionResource::collection(
-            $this->transactions->paginateForUser($request->user()),
+            $this->transactions->paginateForUser($request->user(), $filters),
         );
     }
 

@@ -164,6 +164,24 @@ Sem proteção, duas transferências simultâneas poderiam ler o mesmo saldo, as
 
 Teste realizado: com saldo para exatamente 6 transferências de R$ 30,00, foram disparadas **10 simultâneas**. Resultado: **6 aprovadas, 4 recusadas por saldo insuficiente**, saldo final de R$ 0,75, sem nunca ficar negativo.
 
+### Extrato com filtros
+`GET /api/transactions` aceita filtros opcionais, que podem ser combinados:
+
+| Filtro | Exemplo | Efeito |
+|---|---|---|
+| `from` / `to` | `?from=2026-11-01&to=2026-11-30` | Período em dias inteiros (os dois dias entram) |
+| `direction` | `?direction=out` | `in` = entrou no meu saldo; `out` = saiu |
+| `type` | `?type=deposit` | `deposit`, `transfer` ou `reversal` |
+| `counterpart` | `?counterpart=bob` | Transações entre mim e essa pessoa (email ou nickname), nos dois sentidos |
+
+Decisões:
+- **Os filtros só restringem.** A consulta começa sempre por "transações em que eu participei" (entre parênteses), e cada filtro entra com `AND`. Um filtro nunca consegue mostrar transações de outras pessoas, e há teste específico para isso.
+- **Fuso horário.** O banco grava em UTC, mas o usuário pensa no horário de Brasília. As datas são convertidas para um intervalo em UTC, `[início de "from", início do dia seguinte a "to")`. Sem isso, uma transação às 23h do dia 30 (2h do dia 1º em UTC) ficaria fora do filtro "até dia 30". O fuso é configurável (`WALLET_TIMEZONE`, padrão `America/Sao_Paulo`).
+- **Intervalo meio aberto** (`>= início` e `< dia seguinte`) em vez de `BETWEEN ... 23:59:59`: não perde transações nos milissegundos finais do dia.
+- **Paginação preserva os filtros:** o link da próxima página mantém a query (`?type=deposit&page=2`).
+- Os índices `(sender_id, created_at)` e `(receiver_id, created_at)` atendem exatamente a essas consultas.
+- Validação com mensagens claras (data fora do formato `AAAA-MM-DD`, data final antes da inicial, direção ou tipo desconhecidos → 422; contraparte inexistente → 404).
+
 ### Reversão
 `POST /api/transactions/{id}/reverse`, com `reason` opcional.
 
@@ -206,7 +224,7 @@ Arquivo: `docs/postman/wallet-transfer-system.postman_collection.json`.
 - O login salva o token na variável `{{token}}`, e as demais rotas o usam automaticamente.
 - Depósito e transferência salvam o id em `{{transaction_id}}`, usado no detalhe e na reversão.
 - Cada requisição tem uma descrição e um teste que confere o status HTTP esperado.
-- A coleção inteira pode ser executada de uma vez (*Run collection*): **25 requisições, 25 testes aprovados** com o banco recém-criado pelo seed.
+- A coleção inteira pode ser executada de uma vez (*Run collection*): **29 requisições, 29 testes aprovados** com o banco recém-criado pelo seed.
 
 ## 9. Testes automatizados
 
@@ -230,7 +248,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Tipo | Pasta | O que testa | Arquivos |
 |---|---|---|---|
 | **Unitário** | `tests/Unit` | Uma classe isolada, sem API | `MoneyTest` (formatação), `TransactionReversalRulesTest` (regra de quem pode reverter), `TransferServiceTest` (service com **repositórios falsos/mocks**, sem banco) |
-| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest` |
+| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest` |
 
 ### Cobertura das regras do desafio
 | Requisito | Testado em |
@@ -244,6 +262,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Prazo de 90 dias para reverter | `ReversalTest` e `TransactionReversalRulesTest` (no limite exato, 1 segundo depois, configurável, admin sem prazo). Usam a "viagem no tempo" do Laravel (`$this->travel(90)->days()`). |
 | Reversão por inconsistência | `ReversalTest::test_comando_administrativo_reverte_por_inconsistencia_sem_ser_o_dono` |
 | Consistência saldo × extrato | `StatementTest::test_saldo_sempre_bate_com_a_soma_do_extrato` |
+| Filtros do extrato (período, direção, tipo, contraparte) | `StatementFilterTest` (bordas do dia no horário de Brasília, filtros combinados, nunca mostra transações de terceiros, validação) |
 
 O teste de unidade `TransferServiceTest` só é possível porque o service depende de **interfaces** (`UserRepositoryInterface`): no teste, o banco é substituído por um objeto falso. É a Inversão de Dependência (SOLID) na prática.
 
