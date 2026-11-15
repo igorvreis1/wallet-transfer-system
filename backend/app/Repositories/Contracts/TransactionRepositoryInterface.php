@@ -6,6 +6,7 @@ use App\Data\StatementFilters;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 interface TransactionRepositoryInterface
 {
@@ -30,5 +31,13 @@ interface TransactionRepositoryInterface
      *
      * @return LengthAwarePaginator<int, Transaction>
      */
+    /**
+     * Pessoas com quem o usuário já transacionou (enviou, recebeu ou estornou), em ordem alfabética.
+     * Alimenta o filtro "Pessoa" do extrato sem permitir descobrir outros usuários.
+     *
+     * @return Collection<int, User>
+     */
+    public function counterpartsOf(User $user): Collection;
+
     public function paginateForUser(User $user, StatementFilters $filters = new StatementFilters, int $perPage = 15): LengthAwarePaginator;
 }

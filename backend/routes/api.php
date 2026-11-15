@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Extrato e reversão
     Route::get('transactions', [TransactionController::class, 'index']);
+    Route::get('transactions/counterparts', [TransactionController::class, 'counterparts']);
     Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->whereNumber('transaction');
     Route::post('transactions/{transaction}/reverse', [TransactionController::class, 'reverse'])->whereNumber('transaction');
 });

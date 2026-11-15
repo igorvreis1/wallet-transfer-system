@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Repositories\Contracts\TransactionRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class EloquentTransactionRepository implements TransactionRepositoryInterface
 {
@@ -26,6 +27,19 @@ class EloquentTransactionRepository implements TransactionRepositoryInterface
         return $this->queryForUser($user)
             ->with(['sender', 'receiver', 'reversal'])
             ->find($id);
+    }
+
+    public function counterpartsOf(User $user): Collection
+    {
+        // Subconsultas: para quem eu enviei + quem enviou para mim (depósitos não têm contraparte)
+        $sentTo = Transaction::query()->where('sender_id', $user->id)->whereNotNull('receiver_id')->select('receiver_id');
+        $receivedFrom = Transaction::query()->where('receiver_id', $user->id)->whereNotNull('sender_id')->select('sender_id');
+
+        return User::query()
+            ->where(fn (Builder $q) => $q->whereIn('id', $sentTo)->orWhereIn('id', $receivedFrom))
+            ->whereKeyNot($user->id)
+            ->orderBy('nickname')
+            ->get(['id', 'nickname']);
     }
 
     public function paginateForUser(User $user, StatementFilters $filters = new StatementFilters, int $perPage = 15): LengthAwarePaginator

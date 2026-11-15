@@ -43,7 +43,7 @@ docker compose exec app php artisan migrate:fresh --seed
 docker compose exec app php artisan test
 ```
 
-São 112 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
+São 115 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
 
 ## Testar no Postman
 
@@ -69,6 +69,7 @@ Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 | GET | `/api/users/lookup?identifier=` | Bearer | Confirma o destinatário antes de transferir |
 | POST | `/api/wallet/transfer` | Bearer | Transferência (`recipient` = email ou nickname, `amount`, `description` opcional) |
 | GET | `/api/transactions` | Bearer | Extrato paginado, com filtros opcionais: `from`, `to` (AAAA-MM-DD), `direction` (in/out), `type`, `counterpart` |
+| GET | `/api/transactions/counterparts` | Bearer | Pessoas com quem você já transacionou (opções do filtro "Pessoa") |
 | GET | `/api/transactions/{id}` | Bearer | Detalhe de uma transação |
 | POST | `/api/transactions/{id}/reverse` | Bearer | Reverte um depósito ou uma transferência (`reason` opcional) |
 
@@ -77,8 +78,8 @@ Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 - [x] **Fase 1:** monorepo, ambiente Docker (MySQL, PHP-FPM, Nginx, Vite)
 - [x] **Fase 2:** autenticação (cadastro, login por email ou nickname, logout, token Bearer com Sanctum)
 - [x] **Fase 3:** carteira (depósito, transferência, reversão, extrato) e coleção do Postman
-- [x] **Fase 4:** testes unitários e de integração (112 testes, banco de testes separado)
-- [ ] **Fase 5:** frontend (em andamento: tema escuro próprio, login e cadastro prontos; painel, transferência e extrato a seguir)
+- [x] **Fase 4:** testes unitários e de integração (115 testes, banco de testes separado)
+- [ ] **Fase 5:** frontend (em andamento: login, cadastro, início com saldo animado, depósito por Pix ou cartão, transferência com comprovante em PDF, reversão e extrato com filtros prontos)
 - [ ] **Fase 6:** observabilidade (log de erros)
 - [ ] **Fase 7 (extra):** app em Flutter consumindo a mesma API (backend multiplataforma)
 - [ ] **Fase 8 (extra):** multimoeda (BRL, USD, EUR) e câmbio entre as próprias carteiras

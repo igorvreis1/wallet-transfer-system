@@ -46,6 +46,19 @@ class TransactionController extends Controller
     }
 
     /**
+     * GET /api/transactions/counterparts: pessoas com quem você já transacionou
+     * (para o filtro "Pessoa" do extrato). Só nickname: nada de email ou saldo.
+     */
+    public function counterparts(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->transactions->counterpartsOf($request->user())
+                ->map(fn ($user) => ['nickname' => $user->nickname])
+                ->values(),
+        ]);
+    }
+
+    /**
      * GET /api/transactions/{id}
      */
     public function show(Request $request, int $transaction): TransactionResource

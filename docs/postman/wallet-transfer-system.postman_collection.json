@@ -1531,6 +1531,41 @@
           "description": "",
           "item": [
             {
+              "name": "Pessoas com quem já transacionei",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transactions/counterparts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transactions",
+                    "counterparts"
+                  ]
+                },
+                "description": "Opções do filtro \"Pessoa\" do extrato: só nicknames de quem já enviou ou recebeu dinheiro de você. Não permite descobrir outros usuários."
+              }
+            },
+            {
               "name": "Listar extrato",
               "event": [
                 {

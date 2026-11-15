@@ -229,7 +229,7 @@ Arquivo: `docs/postman/wallet-transfer-system.postman_collection.json`.
 - O login salva o token na variável `{{token}}`, e as demais rotas o usam automaticamente.
 - Depósito e transferência salvam o id em `{{transaction_id}}`, usado no detalhe e na reversão.
 - Cada requisição tem uma descrição e um teste que confere o status HTTP esperado.
-- A coleção inteira pode ser executada de uma vez (*Run collection*): **40 requisições, 40 testes aprovados** com o banco recém-criado pelo seed.
+- A coleção inteira pode ser executada de uma vez (*Run collection*): **41 requisições, 41 testes aprovados** com o banco recém-criado pelo seed.
 
 ## 9. Testes automatizados
 
@@ -253,7 +253,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Tipo | Pasta | O que testa | Arquivos |
 |---|---|---|---|
 | **Unitário** | `tests/Unit` | Uma classe isolada, sem API | `MoneyTest` (formatação), `TransactionReversalRulesTest` (regra de quem pode reverter), `TransferServiceTest` (service com **repositórios falsos/mocks**, sem banco) |
-| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest`, `EmailPrivacyTest`, `TransferDetailsTest`, `CardTest` |
+| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest`, `EmailPrivacyTest`, `TransferDetailsTest`, `CardTest`, `CounterpartsTest` |
 
 ### Cobertura das regras do desafio
 | Requisito | Testado em |
@@ -271,6 +271,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Privacidade do email (nickname sempre público) | `EmailPrivacyTest` (padrão visível, cadastro oculto, busca/transferência/filtro pelo email oculto não encontram, login do dono continua, alternar a preferência) |
 | Mensagem, prazo e motivo da reversão | `TransferDetailsTest` (mensagem visível aos dois lados, opcional e com limite, `reversible_until`, dados da reversão) |
 | Cartões e depósito por Pix/cartão | `CardTest` (CRUD, cartão de outra pessoa = 404, vencido, limite de 5, número completo e CVV recusados, depósito por Pix e por cartão) |
+| Pessoas do filtro do extrato | `CounterpartsTest` (só quem já transacionou com você, sem repetir, em ordem alfabética; nunca transações de terceiros) |
 
 O teste de unidade `TransferServiceTest` só é possível porque o service depende de **interfaces** (`UserRepositoryInterface`): no teste, o banco é substituído por um objeto falso. É a Inversão de Dependência (SOLID) na prática.
 
