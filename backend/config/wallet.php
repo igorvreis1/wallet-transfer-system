@@ -19,4 +19,13 @@ return [
     */
     'timezone' => env('WALLET_TIMEZONE', 'America/Sao_Paulo'),
 
+    /*
+    | Observabilidade: por quantos dias os registros de error_logs são mantidos.
+    | Depois disso, o agendador apaga (php artisan model:prune, todo dia).
+    */
+    'error_log' => [
+        'warning_days' => (int) env('ERROR_LOG_WARNING_DAYS', 30), // erros esperados (4xx)
+        'error_days' => (int) env('ERROR_LOG_ERROR_DAYS', 90),     // erros inesperados (5xx)
+    ],
+
 ];

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CardController;
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 /*
 | Todas as rotas aqui recebem o prefixo /api (ex.: POST /api/auth/login).
 */
+
+// Observabilidade: saúde da API e do banco (pública, sem dados sensíveis)
+Route::get('health', HealthController::class);
 
 // Públicas: apenas cadastro e login, com limite de tentativas contra força bruta.
 Route::prefix('auth')->middleware('throttle:auth')->group(function () {

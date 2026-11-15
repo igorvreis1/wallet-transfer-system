@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\BusinessException;
+use App\Http\Middleware\ObserveRequest;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,14 +21,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Observabilidade: ID por requisição (X-Request-Id) + registro de todo erro da API em error_logs
+        $middleware->prepend(ObserveRequest::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $isApi = fn (Request $request) => $request->is('api/*') || $request->expectsJson();
 
         $exceptions->shouldRenderJsonWhen($isApi);
 
-        // Erros de regra de negócio são esperados: resposta clara e nada no log.
+        // Erros de regra de negócio são esperados: não poluem o ARQUIVO de log.
+        // (Eles continuam registrados na tabela error_logs como "warning", pelo middleware ObserveRequest.)
         $exceptions->dontReport(BusinessException::class);
 
         /*

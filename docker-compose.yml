@@ -43,6 +43,27 @@ services:
       mysql:
         condition: service_healthy # só sobe quando o MySQL já aceita conexões
 
+  # Agendador do Laravel: roda as tarefas agendadas (ex.: limpeza diária dos logs de erro antigos)
+  scheduler:
+    build:
+      context: ./docker/php
+    container_name: wallet-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-wallet}
+      DB_USERNAME: ${DB_USERNAME:-wallet}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - ./backend:/var/www/html
+    # Não repete a preparação do "app" (composer/migrations): só espera as dependências existirem
+    entrypoint: ['sh', '-c', 'until [ -f vendor/autoload.php ] && [ -f .env ]; do sleep 3; done; exec php artisan schedule:work']
+    depends_on:
+      - app
+
   # Servidor web: recebe HTTP e repassa o PHP para o serviço "app"
   nginx:
     image: nginx:1.27-alpine
