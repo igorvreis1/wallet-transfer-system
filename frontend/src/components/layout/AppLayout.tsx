@@ -1,7 +1,7 @@
-import { ArrowUpRight, Eye, EyeOff, House, LogOut, ReceiptText } from 'lucide-react'
+import { Eye, EyeOff, House, LogOut, ReceiptText } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../auth/useAuth'
 import { api, ApiError } from '../../lib/api'
 import { cn } from '../../lib/cn'
@@ -13,7 +13,6 @@ import { useBalanceVisibility, type AppOutletContext } from './BalanceVisibility
 
 const tabs = [
   { to: '/', label: 'Início', icon: House, end: true },
-  { to: '/transferir', label: 'Transferir', icon: ArrowUpRight, end: false },
   { to: '/extrato', label: 'Extrato', icon: ReceiptText, end: false },
 ]
 
@@ -24,6 +23,7 @@ const tabs = [
 export function AppLayout() {
   const { user } = useAuth()
   const { hidden, toggle } = useBalanceVisibility()
+  const { pathname } = useLocation()
 
   if (!user) return null
   const context: AppOutletContext = { balanceHidden: hidden, toggleBalance: toggle }
@@ -44,8 +44,10 @@ export function AppLayout() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
+                    // /transferir é a própria Início com o bloco aberto
+
                     'rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors duration-200',
-                    isActive ? 'bg-white/[0.08] text-fg shadow-[inset_0_0_0_1px_#2a2a30]' : 'text-muted hover:text-fg',
+                    isActive || (to === '/' && pathname === '/transferir') ? 'bg-white/[0.08] text-fg shadow-[inset_0_0_0_1px_#2a2a30]' : 'text-muted hover:text-fg',
                   )
                 }
               >
@@ -83,10 +85,11 @@ export function AppLayout() {
 }
 
 function MobileTabBar() {
+  const { pathname } = useLocation()
   return (
     <nav
       aria-label="Principal"
-      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-line bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t border-line bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     >
       {tabs.map(({ to, label, icon: Icon, end }) => (
         <NavLink
@@ -96,13 +99,13 @@ function MobileTabBar() {
           className={({ isActive }) =>
             cn(
               'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
-              isActive ? 'text-fg' : 'text-subtle',
+              isActive || (to === '/' && pathname === '/transferir') ? 'text-fg' : 'text-subtle',
             )
           }
         >
           {({ isActive }) => (
             <>
-              {isActive && <span className="absolute top-0 h-px w-10 bg-accent" />}
+              {(isActive || (to === '/' && pathname === '/transferir')) && <span className="absolute top-0 h-px w-10 bg-accent" />}
               <Icon className="size-5" strokeWidth={isActive ? 2.2 : 1.8} />
               {label}
             </>

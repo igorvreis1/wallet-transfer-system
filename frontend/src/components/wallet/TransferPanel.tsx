@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowUpRight, Check, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Check } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { api, ApiError } from '../../lib/api'
 import { formatDateTime } from '../../lib/date'
@@ -10,7 +10,7 @@ import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
 import { MoneyInput } from '../ui/MoneyInput'
-import { Card } from '../ui/Section'
+import { Combobox } from '../ui/Combobox'
 import { ReceiptActions } from './ReceiptActions'
 
 type Step =
@@ -39,6 +39,14 @@ export function TransferPanel({
   const [amount, setAmount] = useState(0)
   const [recipient, setRecipient] = useState('')
   const [message, setMessage] = useState('')
+  const [suggestions, setSuggestions] = useState<string[]>([])
+
+  // Sugestões do campo "Para quem": pessoas com quem você já transacionou
+  useEffect(() => {
+    api<{ data: Array<{ nickname: string }> }>('/transactions/counterparts')
+      .then(({ data }) => setSuggestions(data.map((person) => person.nickname)))
+      .catch(() => setSuggestions([]))
+  }, [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
   const [localErrors, setLocalErrors] = useState<{ amount?: string; recipient?: string }>({})
@@ -89,16 +97,8 @@ export function TransferPanel({
   }
 
   return (
-    <Card className="relative overflow-hidden">
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Fechar transferência"
-        className="absolute top-4 right-4 grid size-8 place-items-center rounded-full text-subtle transition-colors hover:bg-white/[0.05] hover:text-fg"
-      >
-        <X className="size-4" />
-      </button>
-
+    // Conteúdo da aba "Transferir" do card principal (a moldura e as abas ficam na Início)
+    <div className="relative">
       <AnimatePresence mode="wait" initial={false}>
         {step.name === 'form' ? (
           <motion.form
@@ -124,21 +124,22 @@ export function TransferPanel({
                 hint={balanceHint(amount, balance, balanceHidden)}
                 error={localErrors.amount ?? error?.field('amount')}
               />
-              <Field
+              {/* Select2 com sugestões de quem você já transacionou; aceita digitar qualquer nickname ou email */}
+              <Combobox
                 label="Para quem"
-                autoCapitalize="none"
-                autoComplete="off"
-                placeholder="nickname ou email"
-                tooltip="Use o nickname da pessoa (sempre funciona) ou o email, se ela deixou o email visível."
-                hint="Na próxima etapa você confere quem vai receber."
-                value={recipient}
-                onChange={(event) => {
-                  setRecipient(event.target.value)
+                freeText
+                size="lg"
+                options={suggestions}
+                value={recipient || null}
+                onChange={(value) => {
+                  setRecipient(value ?? '')
                   setLocalErrors((e) => ({ ...e, recipient: undefined }))
                   setError(null)
                 }}
+                placeholder="nickname ou email"
+                format={(nickname) => `@${nickname}`}
+                hint={suggestions.length ? 'Digite o nickname ou email.' : 'Digite o nickname ou email.'}
                 error={localErrors.recipient ?? (error && !error.field('amount') ? error.message : undefined)}
-                className="[&_input]:h-14"
               />
             </div>
             <Field
@@ -254,7 +255,7 @@ export function TransferPanel({
           </motion.div>
         )}
       </AnimatePresence>
-    </Card>
+    </div>
   )
 }
 

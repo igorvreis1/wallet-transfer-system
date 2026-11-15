@@ -1,11 +1,22 @@
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, Landmark, MessageSquare, RotateCcw } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, CreditCard, Landmark, MessageSquare, QrCode, RotateCcw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { formatDateTime } from '../../lib/date'
 import { transactionTitle } from '../../lib/transaction'
 import type { Transaction } from '../../types/api'
 
 export function TransactionIcon({ t, size = 'md' }: { t: Transaction; size?: 'md' | 'lg' }) {
-  const Icon = t.type === 'deposit' ? Landmark : t.type === 'reversal' ? RotateCcw : t.direction === 'in' ? ArrowDownLeft : ArrowUpRight
+  const Icon =
+    t.type === 'deposit'
+      ? t.payment_method === 'card'
+        ? CreditCard
+        : t.payment_method === 'pix'
+          ? QrCode
+          : Landmark
+      : t.type === 'reversal'
+        ? RotateCcw
+        : t.direction === 'in'
+          ? ArrowDownLeft
+          : ArrowUpRight
   return (
     <span
       className={cn(
@@ -39,6 +50,8 @@ export function TransactionRow({ t, onOpen }: { t: Transaction; onOpen?: (t: Tra
         </p>
         <p className="flex items-center gap-2 text-[12px] text-subtle">
           {formatDateTime(t.created_at)}
+          {/* Depósito por cartão: qual cartão foi usado */}
+          {t.payment_method === 'card' && t.payment_detail && <span className="truncate">· {t.payment_detail}</span>}
           {reversed && (
             <span className="rounded-full border border-warn-line bg-warn-soft px-2 py-px text-[11px] text-warn">Revertida</span>
           )}

@@ -9,7 +9,6 @@ import type { Card as SavedCard, OperationResponse } from '../../types/api'
 import { ButtonSlot } from '../ui/ButtonSlot'
 import { Button } from '../ui/Button'
 import { MoneyInput } from '../ui/MoneyInput'
-import { Card } from '../ui/Section'
 import { BrandMark } from './BrandMark'
 import { CardFormModal } from './CardFormModal'
 import { PixModal } from './PixModal'
@@ -75,8 +74,9 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
   const selectedCardId = method.kind === 'card' ? method.card.id : null
 
   return (
-    <Card className="h-full">
-      <form onSubmit={handleSubmit} noValidate className="flex h-full flex-col gap-4">
+    // Conteúdo da aba "Depositar" do card principal (a moldura e as abas ficam na Início)
+    <div>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         <div className="grid gap-2">
           <p className="text-[13px] font-medium">Forma de pagamento</p>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Forma de pagamento">
@@ -157,7 +157,7 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
           setEditing({ open: false, card: null })
         }}
       />
-    </Card>
+    </div>
   )
 }
 
