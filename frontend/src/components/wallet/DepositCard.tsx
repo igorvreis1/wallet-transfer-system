@@ -11,9 +11,10 @@ import { Button } from '../ui/Button'
 import { MoneyInput } from '../ui/MoneyInput'
 import { BrandMark } from './BrandMark'
 import { CardFormModal } from './CardFormModal'
+import { BoletoModal } from './BoletoModal'
 import { PixModal } from './PixModal'
 
-type Method = { kind: 'pix' } | { kind: 'card'; card: SavedCard }
+type Method = { kind: 'pix' } | { kind: 'boleto' } | { kind: 'card'; card: SavedCard }
 
 /**
  * Depósito: escolha a forma (Pix ou um cartão salvo), digite o valor e deposite.
@@ -28,7 +29,9 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useTimedMessage() // some sozinha após 5s
-  const [pixOpen, setPixOpen] = useState(false)
+  // Pix e boleto abrem um pop-up (QR Code / linha digitável) antes de confirmar
+  const [paying, setPaying] = useState<'pix' | 'boleto' | null>(null)
+  const pixOpen = paying !== null
   const [editing, setEditing] = useState<{ open: boolean; card: SavedCard | null }>({ open: false, card: null })
 
   useEffect(() => {
@@ -49,7 +52,7 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
       setError('Digite um valor maior que zero.')
       return
     }
-    if (method.kind === 'pix') setPixOpen(true) // Pix: primeiro mostra o QR Code
+    if (method.kind === 'pix' || method.kind === 'boleto') setPaying(method.kind) // primeiro mostra o QR Code / boleto
     else void deposit()
   }
 
@@ -57,12 +60,12 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
     setLoading(true)
     setError(null)
     try {
-      const body = method.kind === 'pix' ? { amount, method: 'pix' } : { amount, method: 'card', card_id: method.card.id }
+      const body = method.kind === 'card' ? { amount, method: 'card', card_id: method.card.id } : { amount, method: method.kind }
       const response = await api<OperationResponse>('/wallet/deposit', { method: 'POST', body })
       setBalance(response.balance, response.balance_formatted)
       setSuccess(`Depósito de ${formatCents(amount)} realizado (${response.transaction.payment_detail}).`)
       setAmount(0)
-      setPixOpen(false)
+      setPaying(null)
       onDone()
     } catch (caught) {
       setError(caught instanceof ApiError ? (caught.field('amount') ?? caught.field('card_id') ?? caught.message) : 'Não foi possível depositar.')
@@ -82,6 +85,10 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Forma de pagamento">
             <MethodChip selected={method.kind === 'pix'} onSelect={() => setMethod({ kind: 'pix' })}>
               <BrandMark brand="pix" /> Pix
+            </MethodChip>
+
+            <MethodChip selected={method.kind === 'boleto'} onSelect={() => setMethod({ kind: 'boleto' })}>
+              <BrandMark brand="boleto" /> Boleto
             </MethodChip>
 
             {cards.map((card) => (
@@ -132,13 +139,22 @@ export function DepositCard({ onDone }: { onDone: () => void }) {
         </ButtonSlot>
       </form>
 
+      <BoletoModal
+        open={paying === 'boleto'}
+        amount={amount}
+        loading={loading}
+        error={paying === 'boleto' ? error : null}
+        onClose={() => setPaying(null)}
+        onConfirm={() => void deposit()}
+      />
+
       <PixModal
-        open={pixOpen}
+        open={paying === 'pix'}
         amount={amount}
         nickname={user?.nickname ?? ''}
         loading={loading}
-        error={pixOpen ? error : null}
-        onClose={() => setPixOpen(false)}
+        error={paying === 'pix' ? error : null}
+        onClose={() => setPaying(null)}
         onConfirm={() => void deposit()}
       />
 

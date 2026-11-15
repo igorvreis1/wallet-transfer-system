@@ -5,6 +5,7 @@ export function transactionTitle(t: Transaction): string {
   if (t.type === 'deposit') {
     if (t.payment_method === 'card') return 'Depósito via cartão de crédito'
     if (t.payment_method === 'pix') return 'Depósito via Pix'
+    if (t.payment_method === 'boleto') return 'Depósito via boleto'
     return 'Depósito' // depósitos antigos, de antes de existir a forma de pagamento
   }
   if (t.type === 'transfer') return t.direction === 'in' ? `De @${t.counterpart}` : `Para @${t.counterpart}`

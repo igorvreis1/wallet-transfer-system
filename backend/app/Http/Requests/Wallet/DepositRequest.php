@@ -37,7 +37,7 @@ class DepositRequest extends FormRequest
     {
         return [
             ...$this->amountMessages(),
-            'method.enum' => 'Forma de pagamento inválida. Use "pix" ou "card".',
+            'method.enum' => 'Forma de pagamento inválida. Use "pix", "card" ou "boleto".',
             'card_id.required_if' => 'Escolha o cartão para o depósito.',
             'card_id.prohibited_unless' => 'Informe o cartão só quando o depósito for por cartão.',
         ];

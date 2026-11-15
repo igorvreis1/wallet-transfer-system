@@ -208,7 +208,7 @@ class CardTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('errors.card_id.0', 'Escolha o cartão para o depósito.');
 
-        $this->postJson('/api/wallet/deposit', ['amount' => 10_00, 'method' => 'boleto'])
+        $this->postJson('/api/wallet/deposit', ['amount' => 10_00, 'method' => 'cheque'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['method']);
     }

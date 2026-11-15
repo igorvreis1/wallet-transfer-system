@@ -6,10 +6,21 @@ import type { CardBrand } from '../../types/api'
  * "Bandeirinha" do meio de pagamento, desenhada com CSS (sem imagens).
  * Tamanho de um cartãozinho: 34 x 22.
  */
-export function BrandMark({ brand, className }: { brand: CardBrand | 'pix'; className?: string }) {
+export function BrandMark({ brand, className }: { brand: CardBrand | 'pix' | 'boleto'; className?: string }) {
   const base = cn('inline-grid h-[22px] w-[34px] shrink-0 place-items-center overflow-hidden rounded-[5px] select-none', className)
 
   switch (brand) {
+    case 'boleto':
+      return (
+        <span className={cn(base, 'bg-[#26262b]')} aria-label="Boleto">
+          {/* barrinhas de código de barras, de larguras diferentes */}
+          <svg viewBox="0 0 24 14" className="h-[12px] w-[20px]" aria-hidden="true">
+            {[0, 2, 3.5, 6, 7, 9.5, 11, 12.5, 15, 16, 18.5, 20, 22.5].map((x, i) => (
+              <rect key={x} x={x} y="0" width={i % 3 === 0 ? 1.4 : 0.8} height="14" fill="#ededed" />
+            ))}
+          </svg>
+        </span>
+      )
     case 'pix':
       return (
         <span className={cn(base, 'bg-[#0f2a26]')} aria-label="Pix">

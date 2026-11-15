@@ -53,8 +53,8 @@ export interface Transaction {
   counterpart: string | null
   /** Mensagem da transferência (opcional, como a do Pix) */
   description: string | null
-  /** Depósitos: "pix" ou "card" */
-  payment_method: 'pix' | 'card' | null
+  /** Depósitos: "pix", "card" ou "boleto" */
+  payment_method: 'pix' | 'card' | 'boleto' | null
   /** Ex.: "Pix" ou "Visa •••• 4242" */
   payment_detail: string | null
   /** Motivo, quando esta linha É uma reversão */

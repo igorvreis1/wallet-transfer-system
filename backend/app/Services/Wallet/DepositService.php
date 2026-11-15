@@ -54,7 +54,7 @@ class DepositService
                 'amount' => $amount,
                 'payment_method' => $method,
                 // Foto do meio de pagamento: o extrato continua certo mesmo se o cartão mudar depois
-                'payment_detail' => $card?->label() ?? 'Pix',
+                'payment_detail' => $card?->label() ?? $method->label(), // "Visa •••• 4242", "Pix" ou "Boleto"
                 'card_id' => $card?->id,
             ]);
         }, attempts: 3);
