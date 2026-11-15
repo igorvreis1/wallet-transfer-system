@@ -22,7 +22,8 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomePage />} />
-              {/* Mesma tela do início, com o bloco de transferência aberto */}
+              {/* Mesma tela do início, com o bloco de depósito ou de transferência aberto */}
+              <Route path="/depositar" element={<HomePage />} />
               <Route path="/transferir" element={<HomePage />} />
               <Route path="/extrato" element={<StatementPage />} />
             </Route>

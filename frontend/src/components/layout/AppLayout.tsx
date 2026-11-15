@@ -44,10 +44,10 @@ export function AppLayout() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    // /transferir é a própria Início com o bloco aberto
+                    // /depositar e /transferir são a própria Início com um bloco aberto
 
                     'rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors duration-200',
-                    isActive || (to === '/' && pathname === '/transferir') ? 'bg-white/[0.08] text-fg shadow-[inset_0_0_0_1px_#2a2a30]' : 'text-muted hover:text-fg',
+                    isActive || (to === '/' && ['/depositar', '/transferir'].includes(pathname)) ? 'bg-white/[0.08] text-fg shadow-[inset_0_0_0_1px_#2a2a30]' : 'text-muted hover:text-fg',
                   )
                 }
               >
@@ -99,13 +99,13 @@ function MobileTabBar() {
           className={({ isActive }) =>
             cn(
               'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
-              isActive || (to === '/' && pathname === '/transferir') ? 'text-fg' : 'text-subtle',
+              isActive || (to === '/' && ['/depositar', '/transferir'].includes(pathname)) ? 'text-fg' : 'text-subtle',
             )
           }
         >
           {({ isActive }) => (
             <>
-              {(isActive || (to === '/' && pathname === '/transferir')) && <span className="absolute top-0 h-px w-10 bg-accent" />}
+              {(isActive || (to === '/' && ['/depositar', '/transferir'].includes(pathname))) && <span className="absolute top-0 h-px w-10 bg-accent" />}
               <Icon className="size-5" strokeWidth={isActive ? 2.2 : 1.8} />
               {label}
             </>
