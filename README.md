@@ -43,7 +43,7 @@ docker compose exec app php artisan migrate:fresh --seed
 docker compose exec app php artisan test
 ```
 
-São 96 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
+São 112 testes (unitários e de integração) que rodam no banco **separado** `wallet_testing`, sem tocar nos dados de desenvolvimento. Detalhes em [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md#9-testes-automatizados).
 
 ## Testar no Postman
 
@@ -61,7 +61,11 @@ Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 | GET | `/api/auth/me` | Bearer | Dados do usuário logado |
 | PATCH | `/api/account/privacy` | Bearer | Mostra ou oculta o email (`email_visible`); o nickname é sempre público |
 | GET | `/api/wallet` | Bearer | Saldo atual |
-| POST | `/api/wallet/deposit` | Bearer | Depósito (`amount`) |
+| POST | `/api/wallet/deposit` | Bearer | Depósito (`amount`; `method` = `pix` ou `card` + `card_id`) |
+| GET | `/api/cards` | Bearer | Meus cartões (só bandeira e 4 últimos dígitos) |
+| POST | `/api/cards` | Bearer | Cadastrar cartão (`brand`, `last4`, `holder_name`, `exp_month`, `exp_year`, `nickname`) |
+| PATCH | `/api/cards/{id}` | Bearer | Editar apelido, nome impresso ou validade |
+| DELETE | `/api/cards/{id}` | Bearer | Excluir cartão |
 | GET | `/api/users/lookup?identifier=` | Bearer | Confirma o destinatário antes de transferir |
 | POST | `/api/wallet/transfer` | Bearer | Transferência (`recipient` = email ou nickname, `amount`, `description` opcional) |
 | GET | `/api/transactions` | Bearer | Extrato paginado, com filtros opcionais: `from`, `to` (AAAA-MM-DD), `direction` (in/out), `type`, `counterpart` |
@@ -73,7 +77,7 @@ Valores monetários são **inteiros em centavos** (`amount: 5075` = R$ 50,75).
 - [x] **Fase 1:** monorepo, ambiente Docker (MySQL, PHP-FPM, Nginx, Vite)
 - [x] **Fase 2:** autenticação (cadastro, login por email ou nickname, logout, token Bearer com Sanctum)
 - [x] **Fase 3:** carteira (depósito, transferência, reversão, extrato) e coleção do Postman
-- [x] **Fase 4:** testes unitários e de integração (96 testes, banco de testes separado)
+- [x] **Fase 4:** testes unitários e de integração (112 testes, banco de testes separado)
 - [ ] **Fase 5:** frontend (em andamento: tema escuro próprio, login e cadastro prontos; painel, transferência e extrato a seguir)
 - [ ] **Fase 6:** observabilidade (log de erros)
 - [ ] **Fase 7 (extra):** app em Flutter consumindo a mesma API (backend multiplataforma)

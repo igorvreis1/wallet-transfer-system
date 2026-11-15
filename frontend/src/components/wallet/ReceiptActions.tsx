@@ -1,8 +1,8 @@
-import { Download, MessageCircle, Share2 } from 'lucide-react'
+import { FileText, MessageCircle, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { cn } from '../../lib/cn'
-import { buildReceiptPdf, downloadReceipt, receiptShareText, shareReceipt, whatsappLink } from '../../lib/receipt'
+import { buildReceiptPdf, receiptShareText, shareReceipt, showReceiptInTab, whatsappLink } from '../../lib/receipt'
 import { useTimedMessage } from '../../lib/useTimedMessage'
 import type { Transaction } from '../../types/api'
 import { Button } from '../ui/Button'
@@ -11,7 +11,7 @@ import { Button } from '../ui/Button'
  * Botões do comprovante:
  *  - Compartilhar: menu do sistema com o PDF (no celular, o WhatsApp aparece na lista)
  *  - WhatsApp: abre a conversa com o resumo em texto
- *  - Baixar PDF
+ *  - Ver PDF: abre numa aba nova, no leitor do navegador (que tem baixar e imprimir)
  */
 export function ReceiptActions({
   transaction,
@@ -23,7 +23,7 @@ export function ReceiptActions({
   className?: string
 }) {
   const { user } = useAuth()
-  const [busy, setBusy] = useState<'share' | 'download' | null>(null)
+  const [busy, setBusy] = useState<'share' | 'view' | null>(null)
   const [feedback, setFeedback] = useTimedMessage()
 
   if (!user) return null
@@ -40,11 +40,17 @@ export function ReceiptActions({
     }
   }
 
-  async function handleDownload() {
-    setBusy('download')
+  async function handleView() {
+    // A aba abre JÁ no clique (senão o navegador bloqueia como pop-up) e recebe o PDF quando ficar pronto.
+    const tab = window.open('', '_blank')
+    if (tab) tab.document.title = 'Gerando comprovante…'
+    setBusy('view')
     try {
-      downloadReceipt(await buildReceiptPdf(transaction, ctx), transaction)
-      setFeedback('Comprovante baixado.')
+      showReceiptInTab(tab, await buildReceiptPdf(transaction, ctx), transaction)
+      if (!tab) setFeedback('O navegador bloqueou a nova aba, então o PDF foi baixado.')
+    } catch {
+      tab?.close()
+      setFeedback('Não foi possível gerar o comprovante.')
     } finally {
       setBusy(null)
     }
@@ -53,8 +59,8 @@ export function ReceiptActions({
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="ghost" icon={<Download className="size-4" />} loading={busy === 'download'} loadingText="Gerando" onClick={() => void handleDownload()}>
-          Baixar PDF
+        <Button variant="ghost" icon={<FileText className="size-4" />} loading={busy === 'view'} loadingText="Gerando" onClick={() => void handleView()}>
+          Ver PDF
         </Button>
         <a
           href={whatsappLink(text)}

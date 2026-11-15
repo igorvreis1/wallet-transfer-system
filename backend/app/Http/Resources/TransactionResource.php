@@ -39,6 +39,8 @@ class TransactionResource extends JsonResource
                 ? null
                 : $counterpart->nickname,
             'description' => $this->description, // mensagem da transferência (como a do Pix)
+            'payment_method' => $this->payment_method?->value, // depósitos: "pix" ou "card"
+            'payment_detail' => $this->payment_detail,          // ex.: "Pix" ou "Visa •••• 4242"
             'reason' => $this->reason,           // motivo, quando esta linha É uma reversão
             'reversal_of_id' => $this->reversal_of_id,
             'can_reverse' => $this->resource->isReversibleBy($me), // o frontend usa para mostrar o botão

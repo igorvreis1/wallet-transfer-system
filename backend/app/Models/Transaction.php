@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentMethod;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Model;
@@ -42,7 +43,14 @@ class Transaction extends Model
             'type' => TransactionType::class,
             'status' => TransactionStatus::class,
             'amount' => 'integer',
+            'payment_method' => PaymentMethod::class,
         ];
+    }
+
+    /** Cartão usado no depósito (null se Pix ou se o cartão foi excluído). @return BelongsTo<Card, $this> */
+    public function card(): BelongsTo
+    {
+        return $this->belongsTo(Card::class);
     }
 
     /** @return BelongsTo<User, $this> */

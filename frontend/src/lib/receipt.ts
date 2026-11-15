@@ -36,6 +36,8 @@ export function receiptShareText(t: Transaction, { me }: ReceiptContext): string
 export async function buildReceiptPdf(t: Transaction, ctx: ReceiptContext): Promise<Blob> {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a5' }) // 148 x 210 mm, tamanho de comprovante
+  // Título que aparece na aba do navegador ao abrir o PDF
+  doc.setProperties({ title: `${receiptTitle(t)} #${t.id} · Wallet Easy`, author: 'Wallet Easy' })
   const W = 148
   const M = 14 // margem
 
@@ -87,6 +89,7 @@ export async function buildReceiptPdf(t: Transaction, ctx: ReceiptContext): Prom
     ...(from ? ([['De', `@${from}`]] as Array<[string, string]>) : []),
     ['Para', `@${to}${ctx.counterpartEmailMasked && t.direction === 'out' ? `  (${ctx.counterpartEmailMasked})` : ''}`],
     ['Tipo', t.type_label],
+    ...(t.payment_detail ? ([['Forma de pagamento', t.payment_detail]] as Array<[string, string]>) : []),
     ...(t.description ? ([['Mensagem', `"${t.description}"`]] as Array<[string, string]>) : []),
     ...(t.type === 'reversal' && t.reason ? ([['Motivo', t.reason]] as Array<[string, string]>) : []),
     ['Nº da operação', `#${t.id}`],
@@ -140,6 +143,21 @@ export async function shareReceipt(blob: Blob, t: Transaction, text: string): Pr
 
   downloadReceipt(blob, t)
   return 'downloaded'
+}
+
+/**
+ * Abre o PDF numa aba nova, no leitor de PDF do próprio navegador (que já tem o botão de baixar e imprimir).
+ * A aba precisa ser aberta NO CLIQUE (antes de gerar o PDF), senão o navegador bloqueia como pop-up.
+ * Por isso quem chama abre a aba primeiro e passa aqui.
+ */
+export function showReceiptInTab(tab: Window | null, blob: Blob, t: Transaction): void {
+  const url = URL.createObjectURL(blob)
+  if (tab && !tab.closed) {
+    tab.location.href = url
+  } else {
+    downloadReceipt(blob, t) // pop-up bloqueado: baixa direto
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export function downloadReceipt(blob: Blob, t: Transaction): void {

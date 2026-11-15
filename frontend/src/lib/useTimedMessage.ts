@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 
 /**
  * Mensagem que some sozinha depois de alguns segundos (ex.: "Depósito realizado").
- * Uma mensagem nova reinicia a contagem.
+ * Uma mensagem nova reinicia a contagem. Pode ser um texto ou um objeto (ex.: { tone, text }).
  */
-export function useTimedMessage(durationMs = 5_000) {
-  const [message, setMessage] = useState<string | null>(null)
+export function useTimedMessage<T = string>(durationMs = 5_000) {
+  const [message, setMessage] = useState<T | null>(null)
 
   useEffect(() => {
-    if (!message) return
+    if (message === null) return
     const id = window.setTimeout(() => setMessage(null), durationMs)
     return () => window.clearTimeout(id)
   }, [message, durationMs])

@@ -8,7 +8,8 @@ import { cn } from '../../lib/cn'
 import type { User } from '../../types/api'
 import { Logo } from '../ui/Logo'
 import { Switch } from '../ui/Switch'
-import { HIDDEN_MONEY, useBalanceVisibility, type AppOutletContext } from './BalanceVisibility'
+import { AnimatedBalance } from '../wallet/AnimatedBalance'
+import { useBalanceVisibility, type AppOutletContext } from './BalanceVisibility'
 
 const tabs = [
   { to: '/', label: 'Início', icon: House, end: true },
@@ -60,7 +61,9 @@ export function AppLayout() {
               aria-label={hidden ? 'Mostrar saldo' : 'Esconder saldo'}
               className="group flex items-center gap-2 rounded-full px-2 py-1.5 transition-colors hover:bg-white/[0.04]"
             >
-              <span className="money text-[13px] text-fg">{hidden ? HIDDEN_MONEY : user.balance_formatted}</span>
+              <span className="text-[13px]">
+                <AnimatedBalance cents={user.balance} hidden={hidden} variant="inline" />
+              </span>
               <span className="text-subtle transition-colors group-hover:text-fg">
                 {hidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </span>

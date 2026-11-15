@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CardController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Conta (privacidade: o email pode ser oculto, o nickname é sempre público)
     Route::patch('account/privacy', [AccountController::class, 'updatePrivacy']);
+
+    // Cartões para depósito (só bandeira e 4 últimos dígitos: nunca o número completo)
+    Route::get('cards', [CardController::class, 'index']);
+    Route::post('cards', [CardController::class, 'store']);
+    Route::patch('cards/{card}', [CardController::class, 'update'])->whereNumber('card');
+    Route::delete('cards/{card}', [CardController::class, 'destroy'])->whereNumber('card');
 
     // Carteira
     Route::get('wallet', [WalletController::class, 'show']);

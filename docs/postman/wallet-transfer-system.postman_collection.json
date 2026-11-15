@@ -26,6 +26,10 @@
     {
       "key": "transaction_id",
       "value": ""
+    },
+    {
+      "key": "card_id",
+      "value": ""
     }
   ],
   "item": [
@@ -664,7 +668,7 @@
     },
     {
       "name": "3. Carteira",
-      "description": "Saldo e depósito. **Faça login antes.**",
+      "description": "Saldo, depósito (Pix ou cartão) e cartões salvos. **Faça login antes.**\n\nPagamentos são **simulados**: não há cobrança real.",
       "item": [
         {
           "name": "✅ Sucesso",
@@ -705,7 +709,7 @@
               }
             },
             {
-              "name": "Depositar R$ 50,75",
+              "name": "Depositar R$ 50,75 (Pix)",
               "event": [
                 {
                   "listen": "test",
@@ -742,16 +746,230 @@
                     "deposit"
                   ]
                 },
-                "description": "Soma ao saldo. Se o saldo estiver **negativo** (após uma reversão), o depósito quita a dívida primeiro.\n\nSalva o id em `{{transaction_id}}`.",
+                "description": "Soma ao saldo. Se o saldo estiver **negativo** (após uma reversão), o depósito quita a dívida primeiro.\n\n`method` é opcional (padrão: `pix`).\n\nSalva o id em `{{transaction_id}}`.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"amount\": 5075\n}",
+                  "raw": "{\n  \"amount\": 5075,\n  \"method\": \"pix\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 }
+              }
+            },
+            {
+              "name": "Cadastrar cartão",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "if (body.card) pm.collectionVariables.set(\"card_id\", body.card.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cards",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cards"
+                  ]
+                },
+                "description": "**Segurança (PCI DSS):** só vão a bandeira e os **4 últimos dígitos**. O número completo e o CVV nunca são enviados nem salvos (o frontend valida o número com o algoritmo de Luhn e descarta).\n\nSalva o id em `{{card_id}}`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"brand\": \"visa\",\n  \"last4\": \"4242\",\n  \"holder_name\": \"ALICE EXEMPLO\",\n  \"exp_month\": 12,\n  \"exp_year\": 2030,\n  \"nickname\": \"Cartão do Postman\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Listar meus cartões",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cards",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cards"
+                  ]
+                },
+                "description": "Só os cartões do usuário logado. `label` = \"Visa •••• 4242\"."
+              }
+            },
+            {
+              "name": "Editar cartão (apelido e validade)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cards/{{card_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cards",
+                    "{{card_id}}"
+                  ]
+                },
+                "description": "A \"canetinha\" do app. Bandeira e final não mudam: um número diferente é outro cartão.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nickname\": \"Cartão principal\",\n  \"exp_month\": 6,\n  \"exp_year\": 2031\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Depositar R$ 20,00 com cartão",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "O cartão precisa ser **do próprio usuário** e não pode estar vencido. O extrato guarda uma foto do meio de pagamento (`payment_detail`).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 2000,\n  \"method\": \"card\",\n  \"card_id\": \"{{card_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Excluir cartão",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cards/{{card_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cards",
+                    "{{card_id}}"
+                  ]
+                },
+                "description": "Os depósitos antigos continuam mostrando o cartão no extrato."
               }
             }
           ]
@@ -760,6 +978,101 @@
           "name": "❌ Erros esperados",
           "description": "",
           "item": [
+            {
+              "name": "Cadastrar cartão com número completo",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cards",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cards"
+                  ]
+                },
+                "description": "\"Por segurança, o número completo do cartão não é enviado nem armazenado.\"",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"brand\": \"visa\",\n  \"last4\": \"4242\",\n  \"holder_name\": \"ALICE EXEMPLO\",\n  \"exp_month\": 12,\n  \"exp_year\": 2030,\n  \"number\": \"4242424242424242\",\n  \"cvv\": \"123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Depósito por cartão sem informar o cartão",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "\"Escolha o cartão para o depósito.\"",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 1000,\n  \"method\": \"card\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
             {
               "name": "Depositar valor zero",
               "event": [

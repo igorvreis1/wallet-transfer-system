@@ -9,6 +9,7 @@ import { transactionTitle } from '../../lib/transaction'
 import type { OperationResponse, Transaction } from '../../types/api'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
+import { ButtonSlot } from '../ui/ButtonSlot'
 import { Modal } from '../ui/Modal'
 import { ReceiptActions } from './ReceiptActions'
 import { TransactionIcon } from './TransactionRow'
@@ -25,12 +26,12 @@ export function TransactionDetails({
 }) {
   return (
     <Modal open={transaction !== null} onClose={onClose} title="Detalhes da operação">
-      {transaction && <DetailsContent key={transaction.id} t={transaction} onReversed={onReversed} />}
+      {transaction && <DetailsContent key={transaction.id} t={transaction} onReversed={onReversed} onClose={onClose} />}
     </Modal>
   )
 }
 
-function DetailsContent({ t, onReversed }: { t: Transaction; onReversed: (message: string) => void }) {
+function DetailsContent({ t, onReversed, onClose }: { t: Transaction; onReversed: (message: string) => void; onClose: () => void }) {
   const reversed = t.status === 'reversed'
 
   return (
@@ -60,6 +61,7 @@ function DetailsContent({ t, onReversed }: { t: Transaction; onReversed: (messag
       <dl className="divide-y divide-line rounded-field border border-line">
         <Row label="Data e hora">{formatDateTime(t.created_at)}</Row>
         {t.counterpart && <Row label={t.direction === 'in' ? 'De' : 'Para'}>@{t.counterpart}</Row>}
+        {t.payment_detail && <Row label="Forma de pagamento">{t.payment_detail}</Row>}
         {t.description && <Row label="Mensagem">“{t.description}”</Row>}
         {t.type === 'reversal' && <Row label="Motivo do estorno">{t.reason ?? 'Não informado'}</Row>}
         <Row label="Nº da operação">
@@ -72,7 +74,7 @@ function DetailsContent({ t, onReversed }: { t: Transaction; onReversed: (messag
         <ReceiptActions transaction={t} />
       </div>
 
-      <ReversalSection t={t} onReversed={onReversed} />
+      <ReversalSection t={t} onReversed={onReversed} onClose={onClose} />
     </div>
   )
 }
@@ -87,13 +89,25 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Situação da reversão: já revertida, permitida (com botão), ou o porquê de não poder. */
-function ReversalSection({ t, onReversed }: { t: Transaction; onReversed: (message: string) => void }) {
+function ReversalSection({ t, onReversed, onClose }: { t: Transaction; onReversed: (message: string) => void; onClose: () => void }) {
   const { setBalance } = useAuth()
   const [confirming, setConfirming] = useState(false)
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
   const [openedAt] = useState(() => Date.now()) // "agora" fixo enquanto o pop-up está aberto
+
+  // Reversão concluída: o aviso fica no lugar dos botões; o "x" fecha o pop-up.
+  if (done) {
+    return (
+      <div className="border-t border-line pt-5">
+        <ButtonSlot message={{ tone: 'success', text: done }} onClose={onClose}>
+          {null}
+        </ButtonSlot>
+      </div>
+    )
+  }
 
   if (t.reversed) {
     return (
@@ -124,7 +138,9 @@ function ReversalSection({ t, onReversed }: { t: Transaction; onReversed: (messa
         body: { reason: reason.trim() || null },
       })
       setBalance(response.balance, response.balance_formatted)
-      onReversed(`Operação revertida: ${formatCents(t.amount)} ${t.type === 'deposit' ? 'saíram do' : 'voltaram para o'} seu saldo.`)
+      const message = `Revertida: ${formatCents(t.amount)} ${t.type === 'deposit' ? 'saíram do' : 'voltaram para o'} seu saldo.`
+      setDone(message)
+      onReversed(message) // a lista atrás do pop-up já se atualiza
     } catch (caught) {
       setError(caught instanceof ApiError ? (caught.field('reason') ?? caught.message) : 'Não foi possível reverter.')
       setLoading(false)
@@ -167,15 +183,15 @@ function ReversalSection({ t, onReversed }: { t: Transaction; onReversed: (messa
             <p className="text-[12px] text-subtle">{reason.length}/255 · fica registrado no histórico da operação.</p>
           </div>
           <Alert tone="warning">{consequence} A reversão não pode ser desfeita.</Alert>
-          <Alert tone="error">{error}</Alert>
-          <div className="flex justify-end gap-2">
+          {/* Erro também aparece no lugar dos botões; o "x" traz os botões de volta */}
+          <ButtonSlot message={error ? { tone: 'error', text: error } : null} onClose={() => setError(null)}>
             <Button variant="ghost" onClick={() => setConfirming(false)} disabled={loading}>
               Cancelar
             </Button>
             <Button variant="danger" loading={loading} loadingText="Revertendo" onClick={() => void handleReverse()}>
               Confirmar reversão
             </Button>
-          </div>
+          </ButtonSlot>
         </div>
       )}
     </div>

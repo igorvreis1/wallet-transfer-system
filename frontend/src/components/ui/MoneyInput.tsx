@@ -61,6 +61,20 @@ export function MoneyInput({ label, value, onChange, hint, error, max = MAX_AMOU
           autoComplete="off"
           autoFocus={autoFocus}
           value={formatCents(value, { withSymbol: false })}
+          // Teclado físico: o número entra SEMPRE pela direita e o Backspace tira o último,
+          // não importa onde o cursor esteja (clique no meio do campo não bagunça o valor).
+          onKeyDown={(event) => {
+            if (event.ctrlKey || event.metaKey || event.altKey) return
+            if (/^\d$/.test(event.key)) {
+              event.preventDefault()
+              const next = value * 10 + Number(event.key)
+              if (next <= max) onChange(next)
+            } else if (event.key === 'Backspace' || event.key === 'Delete') {
+              event.preventDefault()
+              onChange(Math.floor(value / 10))
+            }
+          }}
+          // Colar e teclados de celular (que não informam a tecla) caem aqui
           onChange={handleChange}
           // O cursor fica SEMPRE no fim: clique, seta ou foco não conseguem tirá-lo de lá.
           // Assim todo número digitado entra pela direita, como na maquininha.

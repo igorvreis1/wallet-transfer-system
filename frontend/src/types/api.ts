@@ -53,6 +53,10 @@ export interface Transaction {
   counterpart: string | null
   /** Mensagem da transferência (opcional, como a do Pix) */
   description: string | null
+  /** Depósitos: "pix" ou "card" */
+  payment_method: 'pix' | 'card' | null
+  /** Ex.: "Pix" ou "Visa •••• 4242" */
+  payment_detail: string | null
   /** Motivo, quando esta linha É uma reversão */
   reason: string | null
   reversal_of_id: number | null
@@ -62,6 +66,24 @@ export interface Transaction {
   /** Se esta operação já foi revertida: quando e por quê */
   reversed?: { id: number; reason: string | null; created_at: string | null } | null
   created_at: string | null
+}
+
+export type CardBrand = 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'other'
+
+/** Cartão salvo: só bandeira e 4 últimos dígitos (o número completo nunca sai do navegador) */
+export interface Card {
+  id: number
+  brand: CardBrand
+  brand_label: string
+  last4: string
+  label: string
+  holder_name: string
+  exp_month: number
+  exp_year: number
+  /** "12/29" */
+  expires: string
+  expired: boolean
+  nickname: string | null
 }
 
 /** Resposta de depósito, transferência e reversão */

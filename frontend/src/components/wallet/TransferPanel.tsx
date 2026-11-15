@@ -24,7 +24,16 @@ type Step =
  *   2. confirmação: mostra quem vai receber (busca na API) antes de enviar o dinheiro
  *   ✓  concluída: resumo + comprovante em PDF para compartilhar (é comum transferir e já mandar)
  */
-export function TransferPanel({ onClose, onCompleted }: { onClose: () => void; onCompleted: () => void }) {
+export function TransferPanel({
+  onClose,
+  onCompleted,
+  balanceHidden = false,
+}: {
+  onClose: () => void
+  onCompleted: () => void
+  /** Saldo escondido pelo olhinho: as mensagens não podem revelar o valor */
+  balanceHidden?: boolean
+}) {
   const { user, setBalance } = useAuth()
   const [step, setStep] = useState<Step>({ name: 'form' })
   const [amount, setAmount] = useState(0)
@@ -42,7 +51,8 @@ export function TransferPanel({ onClose, onCompleted }: { onClose: () => void; o
     setError(null)
     const errors: typeof localErrors = {}
     if (amount <= 0) errors.amount = 'Digite um valor maior que zero.'
-    else if (amount > balance) errors.amount = `Saldo insuficiente. Seu saldo atual é ${formatCents(balance)}.`
+    else if (amount > balance)
+      errors.amount = balanceHidden ? 'Saldo insuficiente.' : `Saldo insuficiente. Seu saldo atual é ${formatCents(balance)}.`
     if (!recipient.trim()) errors.recipient = 'Informe o email ou nickname de quem vai receber.'
     setLocalErrors(errors)
     if (Object.keys(errors).length > 0) return
@@ -111,7 +121,7 @@ export function TransferPanel({ onClose, onCompleted }: { onClose: () => void; o
                   setAmount(cents)
                   setLocalErrors((e) => ({ ...e, amount: undefined }))
                 }}
-                hint={`Disponível: ${formatCents(balance)}`}
+                hint={balanceHint(amount, balance, balanceHidden)}
                 error={localErrors.amount ?? error?.field('amount')}
               />
               <Field
@@ -228,7 +238,10 @@ export function TransferPanel({ onClose, onCompleted }: { onClose: () => void; o
             <Alert tone="warning">
               Confira o destinatário. Se precisar, você pode reverter esta transferência em até 90 dias.
             </Alert>
-            <Alert tone="error">{error?.message ?? null}</Alert>
+            {/* Com o saldo oculto, a mensagem da API ("...seu saldo atual é R$ X") não pode aparecer inteira */}
+            <Alert tone="error">
+              {error ? (balanceHidden && error.message.startsWith('Saldo insuficiente') ? 'Saldo insuficiente.' : error.message) : null}
+            </Alert>
 
             <div className="flex justify-end gap-2">
               <Button variant="ghost" icon={<ArrowLeft className="size-4" />} onClick={() => setStep({ name: 'form' })} disabled={loading}>
@@ -243,6 +256,16 @@ export function TransferPanel({ onClose, onCompleted }: { onClose: () => void; o
       </AnimatePresence>
     </Card>
   )
+}
+
+/**
+ * Frase embaixo do valor. Com o saldo escondido, nunca mostra o número:
+ * só diz se o valor digitado cabe ou não no saldo.
+ */
+function balanceHint(amount: number, balance: number, hidden: boolean): string {
+  if (!hidden) return `Disponível: ${formatCents(balance)}`
+  if (amount === 0) return 'Seu saldo está oculto.'
+  return amount <= balance ? '✓ Saldo suficiente' : 'Saldo insuficiente para este valor.'
 }
 
 function StepTitle({ step, title }: { step: number; title: string }) {

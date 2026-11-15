@@ -12,7 +12,11 @@ const tones: Record<Tone, { box: string; icon: ReactNode }> = {
   success: { box: 'border-in-line bg-in-soft text-in', icon: <CheckCircle2 className="size-4 shrink-0" /> },
 }
 
-/** Mensagem destacada (vermelho = erro, amarelo = aviso, verde = sucesso), com animação de entrada. */
+/**
+ * Mensagem destacada (vermelho = erro, amarelo = aviso, verde = sucesso).
+ * Entrada: abre o espaço e aparece. Saída: primeiro o texto some devagar,
+ * depois o espaço fecha, sem "pulo" no layout.
+ */
 export function Alert({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
     <AnimatePresence initial={false}>
@@ -21,9 +25,17 @@ export function Alert({ tone, children }: { tone: Tone; children: ReactNode }) {
           key="alert"
           role={tone === 'error' ? 'alert' : 'status'}
           initial={{ opacity: 0, height: 0, y: -4 }}
-          animate={{ opacity: 1, height: 'auto', y: 0 }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={motionTokens.alert}
+          animate={{ opacity: 1, height: 'auto', y: 0, transition: motionTokens.alert }}
+          exit={{
+            opacity: 0,
+            height: 0,
+            y: -6,
+            transition: {
+              opacity: { duration: 0.6, ease: 'easeOut' },
+              y: { duration: 0.6, ease: 'easeOut' },
+              height: { duration: 0.5, delay: 0.45, ease: [0.22, 1, 0.36, 1] },
+            },
+          }}
           className="overflow-hidden"
         >
           <div className={cn('flex items-start gap-2.5 rounded-field border px-3.5 py-3 text-[13px] leading-snug', tones[tone].box)}>

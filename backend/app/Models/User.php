@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -43,5 +44,11 @@ class User extends Authenticatable
             'balance' => 'integer',
             'email_visible' => 'boolean',
         ];
+    }
+
+    /** Cartões salvos para depósito. @return HasMany<Card, $this> */
+    public function cards(): HasMany
+    {
+        return $this->hasMany(Card::class);
     }
 }

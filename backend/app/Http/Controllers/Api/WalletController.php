@@ -10,6 +10,7 @@ use App\Http\Resources\RecipientResource;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Enums\PaymentMethod;
 use App\Services\Wallet\DepositService;
 use App\Services\Wallet\TransferService;
 use App\Support\Money;
@@ -36,7 +37,12 @@ class WalletController extends Controller
      */
     public function deposit(DepositRequest $request): JsonResponse
     {
-        $transaction = $this->deposits->deposit($request->user(), (int) $request->validated('amount'));
+        $transaction = $this->deposits->deposit(
+            $request->user(),
+            (int) $request->validated('amount'),
+            PaymentMethod::from($request->validated('method', PaymentMethod::Pix->value)),
+            $request->validated('card_id') !== null ? (int) $request->validated('card_id') : null,
+        );
 
         return $this->operationResponse($request, $transaction, 'Depósito realizado com sucesso.');
     }

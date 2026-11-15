@@ -1,10 +1,14 @@
-import { Spinner } from './Spinner'
+import { LoadingText } from './LoadingText'
+import { Logo } from './Logo'
 
-export function FullScreenLoader() {
+/** Tela de transição (ex.: conferindo o login ao abrir o app). */
+export function FullScreenLoader({ text = 'Carregando' }: { text?: string }) {
   return (
-    <div className="grid min-h-dvh place-items-center text-muted" role="status">
-      <Spinner className="size-5" />
-      <span className="sr-only">Carregando…</span>
+    <div className="grid min-h-dvh place-items-center">
+      <div className="flex flex-col items-center gap-5">
+        <Logo size="lg" />
+        <LoadingText text={text} />
+      </div>
     </div>
   )
 }
