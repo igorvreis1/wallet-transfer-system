@@ -59,7 +59,7 @@ O `app` só inicia quando o MySQL passa no *healthcheck*. O `entrypoint.sh` inst
 11. **Privacidade do email:** o **nickname é sempre público** (é a "chave" da carteira). O email é visível por padrão, mas o usuário pode ocultá-lo no cadastro ou depois (`PATCH /api/account/privacy`). Oculto, ele não aparece para ninguém (nem mascarado) e **não encontra o usuário** na busca, na transferência ou no filtro do extrato, porque uma busca que achasse o dono revelaria de quem é o email. O próprio dono continua entrando com o email normalmente.
 12. **Mensagem na transferência:** opcional, até 140 caracteres (`description`), visível para quem envia e quem recebe, como a mensagem do Pix. Não confundir com `reason`, que é o motivo de uma reversão.
 13. **Detalhes da operação:** o extrato informa até quando cada operação pode ser revertida (`reversible_until` = data + 90 dias) e, se já foi revertida, quando e por quê (`reversed`).
-14. **Depósito por Pix ou cartão (simulado):** `method` = `pix` (padrão) ou `card` + `card_id`. O cartão precisa ser **do próprio usuário** (o de outra pessoa dá 404) e não pode estar vencido. O extrato guarda uma foto do meio de pagamento (`payment_detail`, ex.: "Visa •••• 4242"), que continua correta mesmo se o cartão for editado ou excluído.
+14. **Depósito por Pix, boleto ou cartão (simulado):** `method` = `pix` (padrão), `boleto` ou `card` + `card_id`. No app, Pix mostra QR Code e copia e cola, e o boleto mostra linha digitável, código de barras e vencimento (ilustrativos). O cartão precisa ser **do próprio usuário** (o de outra pessoa dá 404) e não pode estar vencido. O extrato guarda uma foto do meio de pagamento (`payment_detail`, ex.: "Visa •••• 4242"), que continua correta mesmo se o cartão for editado ou excluído.
 15. **Cartões e segurança (PCI DSS):** o número completo e o CVV **nunca** chegam à API nem ao banco. O frontend valida o número (algoritmo de Luhn), descobre a bandeira e envia só a bandeira e os 4 últimos dígitos; a API recusa explicitamente `number` e `cvv` (`prohibited`). Máximo de 5 cartões por usuário. Num banco real, o número iria para um gateway de pagamento, que devolveria um token.
 
 > **Futuro:** regras de contestação (ex.: o destinatário poder contestar uma reversão, como no MED do Pix).
@@ -229,7 +229,7 @@ Arquivo: `docs/postman/wallet-transfer-system.postman_collection.json`.
 - O login salva o token na variável `{{token}}`, e as demais rotas o usam automaticamente.
 - Depósito e transferência salvam o id em `{{transaction_id}}`, usado no detalhe e na reversão.
 - Cada requisição tem uma descrição e um teste que confere o status HTTP esperado.
-- A coleção inteira pode ser executada de uma vez (*Run collection*): **41 requisições, 41 testes aprovados** com o banco recém-criado pelo seed.
+- A coleção inteira pode ser executada de uma vez (*Run collection*): **43 requisições, 43 testes aprovados** com o banco recém-criado pelo seed.
 
 ## 9. Testes automatizados
 
@@ -253,7 +253,7 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Tipo | Pasta | O que testa | Arquivos |
 |---|---|---|---|
 | **Unitário** | `tests/Unit` | Uma classe isolada, sem API | `MoneyTest` (formatação), `TransactionReversalRulesTest` (regra de quem pode reverter), `TransferServiceTest` (service com **repositórios falsos/mocks**, sem banco) |
-| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest`, `EmailPrivacyTest`, `TransferDetailsTest`, `CardTest`, `CounterpartsTest` |
+| **Integração** | `tests/Feature` | O caminho completo: rota → middleware → validação → controller → service → MySQL | `AuthTest`, `DepositTest`, `TransferTest`, `ReversalTest`, `StatementTest`, `StatementFilterTest`, `EmailPrivacyTest`, `TransferDetailsTest`, `CardTest`, `CounterpartsTest`, `BoletoDepositTest`, `ObservabilityTest` |
 
 ### Cobertura das regras do desafio
 | Requisito | Testado em |
@@ -272,6 +272,8 @@ Todo teste segue **Arrange, Act, Assert** (preparar, agir, conferir).
 | Mensagem, prazo e motivo da reversão | `TransferDetailsTest` (mensagem visível aos dois lados, opcional e com limite, `reversible_until`, dados da reversão) |
 | Cartões e depósito por Pix/cartão | `CardTest` (CRUD, cartão de outra pessoa = 404, vencido, limite de 5, número completo e CVV recusados, depósito por Pix e por cartão) |
 | Pessoas do filtro do extrato | `CounterpartsTest` (só quem já transacionou com você, sem repetir, em ordem alfabética; nunca transações de terceiros) |
+| Depósito por boleto | `BoletoDepositTest` (depósito por boleto, boleto não aceita cartão, extrato mostra a forma de pagamento) |
+| Observabilidade | `ObservabilityTest` (X-Request-Id, todo erro em `error_logs` com o nível certo, senha e cartão nunca gravados, erro inesperado com a causa real, retenção, `/api/health`) |
 
 O teste de unidade `TransferServiceTest` só é possível porque o service depende de **interfaces** (`UserRepositoryInterface`): no teste, o banco é substituído por um objeto falso. É a Inversão de Dependência (SOLID) na prática.
 
@@ -291,15 +293,50 @@ Toda resposta de erro da API segue o formato `{ "message": "..." }`, em portugu�
 | Método HTTP errado | 405 | "Método HTTP não permitido para esta rota." |
 | Erro inesperado (produção) | 500 | "Ocorreu um erro interno. Tente novamente mais tarde." |
 
-Erros de negócio (`BusinessException`) **não** são registrados em log, porque são o sistema funcionando corretamente. Apenas erros inesperados serão registrados (fase 6).
+Erros de negócio (`BusinessException`) **não** vão para o arquivo de log, porque são o sistema funcionando corretamente. Mas **todo erro** fica registrado na tabela `error_logs` (seção 11), com nível `warning` para os esperados e `error` para os inesperados.
 
-## 11. Comandos úteis
+## 11. Observabilidade
+
+Observabilidade é conseguir responder "o que aconteceu?" olhando o próprio sistema, sem adivinhar. O projeto cobre os três pontos básicos:
+
+**1. Um ID por requisição (`X-Request-Id`).** O middleware global `ObserveRequest` dá um ID único a toda requisição da API (ou reaproveita o que o cliente mandou, se for válido). O ID volta no header `X-Request-Id` da resposta e aparece em todas as linhas do arquivo de log (`Log::shareContext`). Se um usuário reclamar de um erro, o ID da resposta leva direto ao registro.
+
+**2. Todo erro registrado (`error_logs`).** Toda resposta 4xx ou 5xx da API vira uma linha na tabela, gravada pelo `ErrorLogger`:
+
+| Campo | Conteúdo |
+|---|---|
+| `level` | `error` (5xx, inesperado: bug ou infraestrutura) ou `warning` (4xx, esperado: regra, validação, login) |
+| `status`, `method`, `path` | Código HTTP e rota |
+| `exception`, `message` | Classe da exceção e mensagem. Nos 5xx, a mensagem **real** (o usuário recebe uma genérica) |
+| `user_id`, `ip`, `duration_ms` | Quem, de onde e quanto tempo levou |
+| `context` | Entrada da requisição **sem dados sensíveis**, campos inválidos e, nos 5xx, as primeiras linhas do stack trace |
+| `request_id` | O mesmo ID do header da resposta |
+
+- **Dados sensíveis nunca são gravados:** senha, confirmação de senha, token, número de cartão e CVV são removidos antes (há testes para isso).
+- **Se nem o banco aceitar o registro** (ex.: banco fora do ar), o erro vai para o arquivo `storage/logs`, e não se perde. Os erros `error` também ganham uma cópia nesse arquivo.
+- **Rota inexistente** também é registrada, porque o middleware é global (roda antes do roteamento).
+
+**3. Saúde do sistema (`GET /api/health`).** Diferente do `/up` (que só diz que o PHP respondeu), confere também o banco e a latência. Responde 200 ou 503, sem expor detalhes técnicos.
+
+**Retenção (para a tabela não crescer para sempre).** O model `ErrorLog` usa o `Prunable` do Laravel, e o container `scheduler` roda `model:prune` todo dia: `warning` some depois de 30 dias e `error` depois de 90 (`ERROR_LOG_WARNING_DAYS` e `ERROR_LOG_ERROR_DAYS` no `.env`). O índice em `created_at` mantém a limpeza e as consultas rápidas.
+
+**Ver os erros:**
+
+```bash
+docker compose exec app php artisan wallet:errors                   # últimos 20
+docker compose exec app php artisan wallet:errors --level=error     # só os inesperados
+```
+
+**Próximos passos em produção:** enviar os logs para uma ferramenta dedicada (Sentry, Datadog, Grafana Loki), com alertas quando os erros `error` passarem de um limite, e métricas de tempo de resposta.
+
+## 12. Comandos úteis
 
 ```bash
 docker compose up -d --build          # sobe tudo
 docker compose ps                     # status dos containers
 docker compose logs -f app            # acompanha os logs do Laravel
 docker compose exec app php artisan   # roda comandos do Artisan
+docker compose exec app php artisan wallet:errors   # últimos erros da API
 docker compose down                   # para tudo (mantém o banco)
 docker compose down -v                # para tudo e APAGA o banco
 ```

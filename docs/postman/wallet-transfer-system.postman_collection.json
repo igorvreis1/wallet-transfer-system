@@ -72,6 +72,43 @@
               "type": "noauth"
             }
           }
+        },
+        {
+          "name": "✅ Saúde da API e do banco",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Confere a API **e o banco** (com a latência). Responde 503 se o banco estiver fora do ar.\n\nToda resposta da API traz o header `X-Request-Id`: é o mesmo ID gravado em `error_logs` quando algo dá errado, para achar o registro do erro.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
         }
       ]
     },
@@ -750,6 +787,54 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"amount\": 5075,\n  \"method\": \"pix\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Depositar R$ 30,00 (boleto)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/deposit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "deposit"
+                  ]
+                },
+                "description": "Boleto simulado: no app, aparece a linha digitável e o código de barras; ao confirmar, o valor entra.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 3000,\n  \"method\": \"boleto\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
